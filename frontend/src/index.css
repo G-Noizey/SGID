@@ -1,0 +1,38 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --beige-light: #f8f5f0;
+  --beige-primary: #d2b48c;
+  --beige-dark: #8c6d46;
+  --beige-text: #5a4a42;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--beige-light);
+  color: var(--beige-text);
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  color: var(--beige-dark);
+}
+
+/* Asegurar que el contenedor ocupe toda la altura */
+#root, .min-vh-100 {
+  min-height: 100vh;
+}
+
+/* Corrección para Bootstrap */
+.form-control:focus {
+  border-color: var(--beige-primary);
+  box-shadow: 0 0 0 0.25rem rgba(210, 180, 140, 0.25);
+}

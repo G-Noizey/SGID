@@ -1,0 +1,198 @@
+/* src/pages/Auth/AuthPages.css */
+.login-container {
+  background-color: #f8f5f0; /* Fondo beige claro */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.login-bg-panel {
+  background: linear-gradient(135deg, #d2b48c 0%, #b89a70 100%);
+  position: relative;
+  border-radius: 12px 0 0 12px;
+}
+
+.login-brand-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 100%;
+  padding: 0 2rem;
+}
+
+.login-brand {
+  font-size: 3rem;
+  font-weight: 800;
+  color: white;
+  letter-spacing: 1px;
+  margin-bottom: 1rem;
+}
+
+.login-slogan {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 350px;
+  margin: 0 auto;
+}
+
+.login-form-container {
+  padding: 3rem 2.5rem; /* Más espacio interno */
+  background: white;
+  border-radius: 0 12px 12px 0;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-title {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #5a4a42;
+  margin-bottom: 0.8rem;
+  text-align: center;
+}
+
+.login-subtitle {
+  font-size: 1rem;
+  color: #6c757d;
+  text-align: center;
+  margin-bottom: 2.5rem; /* Más espacio debajo */
+}
+
+.login-label {
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: 0.8rem; /* Más espacio */
+  display: block;
+}
+
+.login-input {
+  padding: 1rem;
+  border: 1px solid #e0d6c9;
+  border-radius: 8px;
+  transition: all 0.3s;
+  margin-bottom: 1.8rem; /* Más espacio entre campos */
+  width: 100%;
+  font-size: 1rem;
+}
+
+.login-input:focus {
+  border-color: #d2b48c;
+  box-shadow: 0 0 0 0.25rem rgba(210, 180, 140, 0.25);
+  outline: none;
+}
+
+.login-forgot-password {
+  padding: 0;
+  font-size: 0.95rem;
+  color: #d2b48c !important;
+  text-decoration: none;
+  display: block;
+  text-align: right;
+  margin-bottom: 2rem; /* Más espacio */
+}
+
+.login-forgot-password:hover {
+  text-decoration: underline;
+  color: #b89a70 !important;
+}
+
+.login-button {
+  background-color: #d2b48c;
+  border-color: #d2b48c;
+  padding: 1rem;
+  font-weight: 600;
+  font-size: 1.05rem;
+  border-radius: 8px;
+  transition: all 0.3s;
+  width: 100%;
+  margin-bottom: 1.5rem; /* Más espacio */
+  letter-spacing: 0.5px;
+}
+
+.login-button:hover {
+  background-color: #b89a70;
+  border-color: #b89a70;
+}
+
+.login-button:disabled {
+  background-color: #d2b48c;
+  border-color: #d2b48c;
+  opacity: 0.8;
+}
+
+.login-register-container {
+  border-top: 1px solid #f0e9e1;
+  padding-top: 1.8rem; /* Más espacio */
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.login-register-text {
+  color: #6c757d;
+  margin-bottom: 1.2rem; /* Más espacio */
+  font-size: 1rem;
+}
+
+.login-register-button {
+  color: #d2b48c;
+  border-color: #d2b48c;
+  background-color: transparent;
+  padding: 0.6rem 2rem;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.3s;
+  font-size: 1rem;
+  border: 2px solid;
+}
+
+.login-register-button:hover {
+  background-color: #d2b48c;
+  color: white;
+}
+
+
+
+/* Añade estas reglas al archivo AuthPages.css */
+
+/* Ajustes específicos para el formulario de registro */
+.login-form-container.register-form {
+  padding: 2.5rem 2rem;
+}
+
+/* Para formularios más largos */
+.login-card-container {
+  max-height: 95vh;
+  overflow-y: auto;
+}
+
+/* Media query para pantallas pequeñas */
+@media (max-width: 767.98px) {
+  .login-container {
+    padding: 1rem;
+  }
+  
+  .login-form-container {
+    padding: 2rem 1.5rem;
+    border-radius: 12px;
+  }
+  
+  .login-bg-panel {
+    display: none;
+  }
+  
+  .login-card-container {
+    max-height: none;
+  }
+}
+
+/* Ajuste para campos en columnas */
+.login-input-group {
+  margin-bottom: 1.8rem;
+}
