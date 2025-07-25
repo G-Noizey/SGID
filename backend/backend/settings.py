@@ -26,6 +26,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'django_cryptography',
+
     
     # Local apps
     'users',
@@ -133,11 +135,21 @@ if not DEBUG:
         "https://www.tudominio.com",
     ]
 
-# Email Configuration
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = os.getenv('EMAIL_HOST', '')
-EMAIL_PORT = os.getenv('EMAIL_PORT', 587)
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@eventos.com')
+# Configuración de Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # O tu servidor SMTP
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'tu_correo@gmail.com'  # Cambiar por tu email
+EMAIL_HOST_PASSWORD = 'tu_contraseña'  # Cambiar por tu contraseña
+
+
+# Configuración de WhatsApp (Twilio)
+TWILIO_ACCOUNT_SID = 'tu_account_sid'
+TWILIO_AUTH_TOKEN = 'tu_auth_token'
+TWILIO_WHATSAPP_NUMBER = 'whatsapp:+14155238886'  # Número de sandbox de Twilio
+
+
+# Configuración de zona horaria
+TIME_ZONE = 'America/Mexico_City'  # Ajustar según tu ubicación
+USE_TZ = True
