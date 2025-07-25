@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator
+
 import uuid
 
 class Plantilla(models.Model):
@@ -10,7 +11,8 @@ class Plantilla(models.Model):
     imagen_preview = models.ImageField(upload_to='plantillas/previews/', null=True, blank=True)
     es_publica = models.BooleanField(default=True)
     creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-
+    es_temporal = models.BooleanField(default=False)  # Implementación para plantilla temporal
+    fecha_expiracion = models.DateTimeField(null=True, blank=True)  # Implementación para plantilla temporal
     def __str__(self):
         return self.nombre
 
@@ -34,6 +36,7 @@ class Evento(models.Model):
     logo_personalizado = models.ImageField(upload_to='eventos/logos/', null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     guardado_como_borrador = models.BooleanField(default=True)
+    ultimo_guardado = models.DateTimeField(auto_now=True)  # Nuevo campo
     
     def __str__(self):
         return f"{self.titulo} ({self.get_tipo_display()})"
@@ -59,6 +62,10 @@ class Invitacion(models.Model):
     destinatario_email = models.CharField(max_length=100, blank=True, null=True)
     destinatario_telefono = models.CharField(max_length=20, blank=True, null=True)
     metodo_envio = models.CharField(max_length=50, choices=[('email', 'Email'), ('whatsapp', 'WhatsApp')])
+    max_acompanantes = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)]
+    )  # Validacion de acompañantes
     
     def __str__(self):
         return f"Invitación para {self.destinatario_nombre} - {self.evento}"
