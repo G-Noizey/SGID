@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography, Paper, Button, CircularProgress } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { getPlantillasTemporales } from '../../services/plantillas.service';
+import { getPlantillasTemporales, createPlantillaTemporal } from '../../services/plantillas.service';
 import { createEvento } from '../../services/eventos.service';
 import EventForm from './components/EventForm';
 import Swal from 'sweetalert2';
@@ -35,11 +35,12 @@ const CreateInvitation = () => {
         setPlantillas(response); 
         
         if (response?.results?.length > 0) {
+          const firstTemplate = response.results[0];
           setFormData(prev => ({ 
             ...prev, 
-            plantilla: response.results[0].id 
+            plantilla: firstTemplate.id 
           }));
-          setSelectedTemplate(response.results[0]);
+          setSelectedTemplate(firstTemplate);
         }
       } catch (error) {
         console.error("Error loading templates:", error);
@@ -65,34 +66,49 @@ const CreateInvitation = () => {
     setSelectedTemplate(template);
   };
 
-  const handleTemplateCreated = (newTemplate) => {
-    setPlantillas(prev => ({
-      ...prev,
-      count: prev.count + 1,
-      results: [...prev.results, newTemplate]
-    }));
-    
-    setFormData(prev => ({ ...prev, plantilla: newTemplate.id }));
-    setSelectedTemplate(newTemplate);
-    setShowTemplateForm(false);
+  const handleTemplateCreated = async (newTemplate) => {
+    try {
+      setSubmitting(true);
+      const createdTemplate = await createPlantillaTemporal(newTemplate);
+      
+      setPlantillas(prev => ({
+        ...prev,
+        count: prev.count + 1,
+        results: [...prev.results, createdTemplate]
+      }));
+      
+      setFormData(prev => ({ ...prev, plantilla: createdTemplate.id }));
+      setSelectedTemplate(createdTemplate);
+      setShowTemplateForm(false);
+      
+    } catch (error) {
+      console.error("Error creating template:", error);
+      Swal.fire({
+        title: 'Error',
+        text: 'No se pudo crear la plantilla. Por favor, inténtalo de nuevo.',
+        icon: 'error'
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!formData.plantilla) {
-      Swal.fire('Advertencia', 'Selecciona una plantilla', 'warning');
+      Swal.fire('Advertencia', 'Debes seleccionar una plantilla', 'warning');
       return;
     }
 
     setSubmitting(true);
     
     try {
-      const fechaCompleta = `${formData.fecha_evento}T18:00:00Z`;
+      const fechaCompleta = new Date(formData.fecha_evento).toISOString();
+      
       await createEvento({
         ...formData,
-        fecha_evento: fechaCompleta,
-        config_diseno: selectedTemplate?.config_diseno
+        fecha_evento: fechaCompleta
       });
 
       Swal.fire({
@@ -108,9 +124,8 @@ const CreateInvitation = () => {
         fecha_evento: '',
         ubicacion: '',
         descripcion: '',
-        plantilla: plantillas.results[0]?.id || ''
+        plantilla: formData.plantilla
       });
-      setSelectedTemplate(plantillas.results[0] || null);
     } catch (error) {
       console.error("Error creating event:", error);
       Swal.fire({
@@ -157,6 +172,7 @@ const CreateInvitation = () => {
                 handleTemplateChange={handleTemplateChange}
                 plantillas={plantillas}
                 loadingPlantillas={loadingPlantillas}
+                selectedTemplate={selectedTemplate}
               />
               
               <Button 

@@ -7,14 +7,14 @@ import {
   Typography,
   Paper,
   IconButton,
-  Divider,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   RadioGroup,
   FormControlLabel,
-  Radio
+  Radio,
+  CircularProgress
 } from '@mui/material';
 import { 
   ColorLens as ColorIcon,
@@ -42,7 +42,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// Componente SortableItem usando DndKit
+// Componente SortableItem
 const SortableItem = ({ 
   id, 
   element, 
@@ -59,7 +59,7 @@ const SortableItem = ({
     setNodeRef,
     transform,
     transition,
-  } = useSortable({ id: id });
+  } = useSortable({ id });
   
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -202,6 +202,7 @@ const CreateTemplateForm = ({ onSubmit, onCancel }) => {
     titulo: 'Georgia',
     cuerpo: 'Arial'
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -223,16 +224,34 @@ const CreateTemplateForm = ({ onSubmit, onCancel }) => {
     }
   };
 
+  const processImageElements = (elements) => {
+    return elements.map(element => {
+      if (element.type === 'image' && element.content && element.content.startsWith('data:image')) {
+        // Extraer solo el base64 sin el prefijo
+        const base64Data = element.content.split(',')[1];
+        return {
+          ...element,
+          content: base64Data
+        };
+      }
+      return element;
+    });
+  };
+
   const handleSubmit = () => {
+    setSubmitting(true);
+    const processedElements = processImageElements(elements);
+    
     const newTemplate = {
       nombre: templateName || 'Mi Diseño Personalizado',
       config_diseno: {
         colores: colors,
-        elementos: elements,
+        elementos: processedElements,
         fuentes: fonts
       },
       es_temporal: true
     };
+    
     onSubmit(newTemplate);
   };
 
@@ -437,16 +456,16 @@ const CreateTemplateForm = ({ onSubmit, onCancel }) => {
       </DndContext>
 
       <Box display="flex" justifyContent="flex-end" sx={{ mt: 3 }}>
-        <Button onClick={onCancel} sx={{ mr: 2 }}>
+        <Button onClick={onCancel} sx={{ mr: 2 }} disabled={submitting}>
           Cancelar
         </Button>
         <Button 
           variant="contained" 
           color="primary" 
           onClick={handleSubmit}
-          disabled={!templateName}
+          disabled={submitting || !templateName}
         >
-          Guardar Plantilla
+          {submitting ? <CircularProgress size={24} /> : 'Guardar Plantilla'}
         </Button>
       </Box>
     </Box>
