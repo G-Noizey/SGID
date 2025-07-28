@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.views import APIView
@@ -13,22 +13,32 @@ from django.conf import settings
 from .services import enviar_correo, enviar_whatsapp
 
 class PlantillaViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet completo para Plantillas con todos los métodos HTTP:
+    - GET /api/plantillas/ (listar)
+    - POST /api/plantillas/ (crear)
+    - GET /api/plantillas/{id}/ (detalle)
+    - PUT/PATCH /api/plantillas/{id}/ (actualizar)
+    - DELETE /api/plantillas/{id}/ (eliminar)
+    """
     queryset = models.Plantilla.objects.all()
     serializer_class = PlantillaSerializer
-    
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
+
     def perform_create(self, serializer):
+        """Asigna automáticamente el creador y configura temporalidad"""
         if self.request.user.is_staff:
             serializer.save(creado_por=self.request.user)
         else:
-            from django.utils.timezone import now
-            from datetime import timedelta
             serializer.save(
                 creado_por=self.request.user,
                 es_temporal=True,
-                fecha_expiracion=now() + timedelta(hours=48)
+                fecha_expiracion=timezone.now() + timezone.timedelta(hours=48)
             )
-    
+
     def get_queryset(self):
+        """Filtrado según tipo de usuario"""
         if self.request.user.is_staff:
             return models.Plantilla.objects.all()
         return models.Plantilla.objects.filter(
@@ -37,46 +47,73 @@ class PlantillaViewSet(viewsets.ModelViewSet):
         )
 
 class EventoViewSet(viewsets.ModelViewSet):
-    queryset = models.Evento.objects.all()
+    """
+    ViewSet completo para Eventos con acciones personalizadas:
+    - POST /api/eventos/{id}/publicar/
+    - POST /api/eventos/{id}/guardar_borrador/
+    - POST /api/eventos/{id}/guardar_progreso/
+    """
     serializer_class = EventoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
 
     def get_queryset(self):
+        """Solo eventos del usuario actual"""
         return models.Evento.objects.filter(usuario=self.request.user)
-    
+
     def perform_create(self, serializer):
+        """Asigna automáticamente el usuario creador"""
         serializer.save(usuario=self.request.user)
-    
+
     @action(detail=True, methods=['post'])
     def publicar(self, request, pk=None):
+        """Publica un evento (cambia estado de borrador)"""
         evento = self.get_object()
         evento.guardado_como_borrador = False
         evento.save()
         return Response({'status': 'Evento publicado'})
-    
+
     @action(detail=True, methods=['post'])
     def guardar_borrador(self, request, pk=None):
+        """Marca un evento como borrador"""
         evento = self.get_object()
         evento.guardado_como_borrador = True
         evento.save()
         return Response({'status': 'Evento guardado como borrador'})
-    
+
     @action(detail=True, methods=['post'])
     def guardar_progreso(self, request, pk=None):
+        """Actualiza la fecha de último guardado"""
         evento = self.get_object()
         evento.ultimo_guardado = timezone.now()
         evento.save()
-        return Response({'status': 'Progreso guardado', 'fecha': evento.ultimo_guardado})
+        return Response({
+            'status': 'Progreso guardado', 
+            'fecha': evento.ultimo_guardado
+        })
 
 class InvitacionViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet completo para Invitaciones con acciones personalizadas:
+    - POST /api/invitaciones/{id}/enviar/
+    - POST /api/invitaciones/{id}/reenviar/
+    - POST /api/invitaciones/{id}/enviar_recordatorio/
+    - POST /api/invitaciones/enviar_masivo/
+    """
     serializer_class = InvitacionSerializer
-    
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
+
     def get_queryset(self):
+        """Solo invitaciones de eventos del usuario actual"""
         return models.Invitacion.objects.filter(evento__usuario=self.request.user)
-    
+
     def perform_create(self, serializer):
+        """Genera enlace único automáticamente"""
         serializer.save(enlace_unico=str(uuid.uuid4()))
-    
+
     def _enviar_invitacion(self, invitacion):
+        """Lógica común para enviar invitaciones"""
         evento = invitacion.evento
         mensaje = (
             f"¡Hola {invitacion.destinatario_nombre}!\n\n"
@@ -100,22 +137,28 @@ class InvitacionViewSet(viewsets.ModelViewSet):
         invitacion.estado = 'enviada'
         invitacion.fecha_envio = timezone.now()
         invitacion.save()
-    
+
     @action(detail=True, methods=['post'])
     def enviar(self, request, pk=None):
+        """Envía una invitación por primera vez"""
         invitacion = self.get_object()
         try:
             self._enviar_invitacion(invitacion)
             return Response({'status': 'Invitación enviada'})
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     @action(detail=True, methods=['post'])
     def reenviar(self, request, pk=None):
+        """Reenvía una invitación existente"""
         return self.enviar(request, pk)
-    
+
     @action(detail=True, methods=['post'])
     def enviar_recordatorio(self, request, pk=None):
+        """Envía un recordatorio de invitación"""
         invitacion = self.get_object()
         try:
             mensaje = (
@@ -140,10 +183,14 @@ class InvitacionViewSet(viewsets.ModelViewSet):
             
             return Response({'status': 'Recordatorio enviado'})
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=False, methods=['post'])
     def enviar_masivo(self, request):
+        """Envía múltiples invitaciones a la vez"""
         try:
             evento_id = request.data.get('evento_id')
             destinatarios = request.data.get('destinatarios', [])
@@ -157,7 +204,6 @@ class InvitacionViewSet(viewsets.ModelViewSet):
                     destinatario_nombre=destinatario['nombre'],
                     destinatario_email=destinatario.get('email'),
                     destinatario_telefono=destinatario.get('telefono'),
-                    formato='pdf',
                     metodo_envio=destinatario.get('metodo_envio', 'email')
                 )
                 invitaciones_creadas.append(invitacion.id)
@@ -168,17 +214,30 @@ class InvitacionViewSet(viewsets.ModelViewSet):
                 'invitaciones': invitaciones_creadas
             })
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class ConfirmacionViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para Confirmaciones con validación personalizada:
+    - POST /api/confirmaciones/ (crear con validación de acompañantes)
+    """
     serializer_class = ConfirmacionSerializer
-    
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    http_method_names = ['get', 'post', 'head', 'options']
+
     def get_queryset(self):
+        """Filtrado por usuario organizador o acceso público"""
         if self.request.user.is_authenticated:
-            return models.Confirmacion.objects.filter(invitacion__evento__usuario=self.request.user)
+            return models.Confirmacion.objects.filter(
+                invitacion__evento__usuario=self.request.user
+            )
         return models.Confirmacion.objects.none()
-    
+
     def create(self, request, *args, **kwargs):
+        """Crea una confirmación con validación de límites"""
         invitacion_id = request.data.get('invitacion')
         if not invitacion_id:
             return Response(
@@ -217,6 +276,12 @@ class ConfirmacionViewSet(viewsets.ModelViewSet):
         )
 
 class ExportarConfirmacionesView(APIView):
+    """
+    Vista para exportar confirmaciones a CSV:
+    - GET /api/eventos/{id}/exportar-confirmaciones/
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request, evento_id):
         try:
             evento = models.Evento.objects.get(id=evento_id, usuario=request.user)
@@ -238,5 +303,13 @@ class ExportarConfirmacionesView(APIView):
                 ])
             
             return response
+        except models.Evento.DoesNotExist:
+            return Response(
+                {'error': 'Evento no encontrado o no autorizado'},
+                status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )

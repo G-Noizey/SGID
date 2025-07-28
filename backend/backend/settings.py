@@ -143,6 +143,8 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'tu_correo@gmail.com'  # Cambiar por tu email
 EMAIL_HOST_PASSWORD = 'tu_contraseña'  # Cambiar por tu contraseña
 
+#TIENES QUE CREAR UNA LLAVE DE SEGURIDAD SECRETKEY DE GOOGLE PARA USARLA COMO PASSWORD
+
 
 # Configuración de WhatsApp (Twilio)
 TWILIO_ACCOUNT_SID = 'tu_account_sid'

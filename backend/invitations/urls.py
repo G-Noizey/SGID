@@ -4,7 +4,6 @@ from rest_framework.routers import DefaultRouter
 from .views import PlantillaViewSet, EventoViewSet, InvitacionViewSet, ConfirmacionViewSet
 from .views import ExportarConfirmacionesView
 
-
 router = DefaultRouter()
 router.register(r'plantillas', PlantillaViewSet, basename='plantilla')
 router.register(r'eventos', EventoViewSet, basename='evento')
@@ -12,6 +11,7 @@ router.register(r'invitaciones', InvitacionViewSet, basename='invitacion')
 router.register(r'confirmaciones', ConfirmacionViewSet, basename='confirmacion')
 
 urlpatterns = [
+    path('', include(router.urls)),  # ¡Esta línea es crucial para incluir las rutas del router!
     path('eventos/<int:evento_id>/exportar-confirmaciones/', 
          ExportarConfirmacionesView.as_view(), 
          name='exportar_confirmaciones'),
