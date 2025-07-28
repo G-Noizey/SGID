@@ -43,8 +43,8 @@ const EventForm = ({
       <Grid item xs={12} md={6}>
         <TextField
           fullWidth
-          label="Fecha del Evento"
-          type="date"
+          label="Fecha y Hora del Evento"
+          type="datetime-local"
           name="fecha_evento"
           value={formData.fecha_evento}
           onChange={handleChange}
@@ -52,7 +52,7 @@ const EventForm = ({
           required
           variant="outlined"
           inputProps={{
-            min: new Date().toISOString().split('T')[0] // Fecha mínima hoy
+            min: new Date().toISOString().slice(0, 16) // Fecha mínima ahora
           }}
         />
       </Grid>
@@ -109,6 +109,7 @@ const EventForm = ({
           onChange={handleTemplateChange}
           loading={loadingPlantillas}
           selectedTemplate={selectedTemplate}
+          required
         />
       </Grid>
 

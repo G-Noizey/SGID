@@ -1,3 +1,4 @@
+#invitations/views.py
 from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -11,47 +12,67 @@ import csv
 from django.db.models import Q
 from django.conf import settings
 from .services import enviar_correo, enviar_whatsapp
+import base64
+from django.core.files.base import ContentFile
 
 class PlantillaViewSet(viewsets.ModelViewSet):
     """
-    ViewSet completo para Plantillas con todos los métodos HTTP:
-    - GET /api/plantillas/ (listar)
-    - POST /api/plantillas/ (crear)
-    - GET /api/plantillas/{id}/ (detalle)
-    - PUT/PATCH /api/plantillas/{id}/ (actualizar)
-    - DELETE /api/plantillas/{id}/ (eliminar)
+    ViewSet completo para Plantillas con todos los métodos HTTP
     """
     queryset = models.Plantilla.objects.all()
     serializer_class = PlantillaSerializer
     permission_classes = [permissions.IsAuthenticated]
     http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
 
+    def create(self, request, *args, **kwargs):
+        # Procesar elementos con imágenes antes de la serialización
+        config_diseno = request.data.get('config_diseno', {})
+        elementos = config_diseno.get('elementos', [])
+        
+        for elemento in elementos:
+            if elemento.get('type') == 'image' and elemento.get('content'):
+                img_data = elemento['content']
+                if isinstance(img_data, str) and img_data.startswith('data:image'):
+                    format, imgstr = img_data.split(';base64,')
+                    ext = format.split('/')[-1]
+                    elemento['content'] = {
+                        'data': imgstr,
+                        'type': format.split(':')[1],
+                        'extension': ext
+                    }
+        
+        # Actualizar request.data con config_diseno procesado
+        mutable_data = request.data.copy()
+        mutable_data['config_diseno'] = config_diseno
+        request._full_data = mutable_data
+        
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         """Asigna automáticamente el creador y configura temporalidad"""
-        if self.request.user.is_staff:
-            serializer.save(creado_por=self.request.user)
+        user = self.request.user
+        if user.is_staff:
+            serializer.save(creado_por=user)
         else:
             serializer.save(
-                creado_por=self.request.user,
+                creado_por=user,
                 es_temporal=True,
                 fecha_expiracion=timezone.now() + timezone.timedelta(hours=48)
             )
 
     def get_queryset(self):
         """Filtrado según tipo de usuario"""
-        if self.request.user.is_staff:
+        user = self.request.user
+        if user.is_staff:
             return models.Plantilla.objects.all()
         return models.Plantilla.objects.filter(
             Q(es_publica=True) | 
-            Q(es_temporal=True, creado_por=self.request.user)
+            Q(es_temporal=True, creado_por=user)
         )
 
 class EventoViewSet(viewsets.ModelViewSet):
     """
-    ViewSet completo para Eventos con acciones personalizadas:
-    - POST /api/eventos/{id}/publicar/
-    - POST /api/eventos/{id}/guardar_borrador/
-    - POST /api/eventos/{id}/guardar_progreso/
+    ViewSet completo para Eventos con acciones personalizadas
     """
     serializer_class = EventoSerializer
     permission_classes = [permissions.IsAuthenticated]

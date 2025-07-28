@@ -1,10 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
   Paper, 
-  Card, 
-  CardContent, 
   Chip,
   Divider
 } from '@mui/material';
@@ -29,29 +27,11 @@ const ColorBadge = styled(Box)(({ color }) => ({
 }));
 
 const TemplatePreview = ({ template }) => {
-  const [previewHtml, setPreviewHtml] = useState('');
-
-  useEffect(() => {
-    const mockHtml = `
-      <div style="font-family: ${template.config_diseno?.fuentes?.cuerpo || 'Arial'}; 
-                  color: ${template.config_diseno?.colores?.text || '#333'}; 
-                  max-width: 500px; margin: 0 auto;">
-        <h1 style="color: ${template.config_diseno?.colores?.primary || '#4a2c82'}; 
-                    font-family: ${template.config_diseno?.fuentes?.titulo || 'Georgia'}; 
-                    text-align: center;">
-          ${template.nombre}
-        </h1>
-        <div style="background: ${template.config_diseno?.colores?.secondary || '#f8e5ff'}; 
-                    padding: 20px; border-radius: 8px;">
-          ${(template.config_diseno?.elementos || [])
-            .map(el => `<p>${el.content}</p>`)
-            .join('')}
-          <p style="text-align: center;">Contenido del evento aparecerá aquí</p>
-        </div>
-      </div>
-    `;
-    setPreviewHtml(mockHtml);
-  }, [template]);
+  const [imageLoadError, setImageLoadError] = useState({});
+  
+  const handleImageError = (index) => {
+    setImageLoadError(prev => ({ ...prev, [index]: true }));
+  };
 
   if (!template) return null;
 
@@ -110,10 +90,66 @@ const TemplatePreview = ({ template }) => {
           borderRadius: 1,
           p: 2,
           minHeight: 200,
-          bgcolor: 'background.default'
+          backgroundColor: template.config_diseno?.colores?.secondary || '#fff'
         }}
-        dangerouslySetInnerHTML={{ __html: previewHtml }}
-      />
+      >
+        {template.config_diseno?.elementos?.map((elemento, index) => (
+          <Box 
+            key={index} 
+            sx={{ 
+              textAlign: elemento.type === 'header' ? 'center' : 'left',
+              mb: 2,
+              color: template.config_diseno.colores?.text || '#000',
+              fontFamily: elemento.type === 'header' 
+                ? template.config_diseno.fuentes?.titulo 
+                : template.config_diseno.fuentes?.cuerpo
+            }}
+          >
+            {elemento.type === 'image' ? (
+              elemento.content && !imageLoadError[index] ? (
+                <Box sx={{ textAlign: 'center', my: 2 }}>
+                  <img 
+                    src={`data:image/png;base64,${elemento.content}`} 
+                    alt={`Imagen ${index}`}
+                    onError={() => handleImageError(index)}
+                    style={{ 
+                      maxWidth: '100%', 
+                      maxHeight: '200px',
+                      objectFit: 'contain'
+                    }} 
+                  />
+                </Box>
+              ) : (
+                <Box sx={{ 
+                  height: 150, 
+                  bgcolor: '#f0f0f0', 
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px dashed #ccc',
+                  borderRadius: 1
+                }}>
+                  <Typography variant="body2" color="textSecondary">
+                    {elemento.content ? 'Error al cargar imagen' : 'Imagen no disponible'}
+                  </Typography>
+                </Box>
+              )
+            ) : (
+              <Typography 
+                variant={elemento.type === 'header' ? 'h4' : 'body1'}
+                sx={{
+                  fontFamily: elemento.type === 'header' 
+                    ? template.config_diseno.fuentes?.titulo 
+                    : template.config_diseno.fuentes?.cuerpo,
+                  color: template.config_diseno.colores?.text || '#000'
+                }}
+              >
+                {elemento.content}
+              </Typography>
+            )}
+          </Box>
+        ))}
+      </Box>
     </PreviewContainer>
   );
 };

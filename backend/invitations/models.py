@@ -1,18 +1,21 @@
+#invitations/models.py
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator
-
 import uuid
+from django.utils import timezone  # Añade esta importación
+
+import json
 
 class Plantilla(models.Model):
     nombre = models.CharField(max_length=50)
-    ruta_archivo = models.CharField(max_length=255, blank=True, null=True)
     config_diseno = models.JSONField()
-    imagen_preview = models.ImageField(upload_to='plantillas/previews/', null=True, blank=True)
     es_publica = models.BooleanField(default=True)
     creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    es_temporal = models.BooleanField(default=False)  # Implementación para plantilla temporal
-    fecha_expiracion = models.DateTimeField(null=True, blank=True)  # Implementación para plantilla temporal
+    es_temporal = models.BooleanField(default=False)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)  # Solo auto_now_add
+    fecha_expiracion = models.DateTimeField(null=True, blank=True)
+
     def __str__(self):
         return self.nombre
 
@@ -32,14 +35,17 @@ class Evento(models.Model):
     descripcion = models.TextField(blank=True, null=True)
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='eventos')
     plantilla = models.ForeignKey(Plantilla, on_delete=models.SET_NULL, null=True, blank=True)
-    fondo_personalizado = models.ImageField(upload_to='eventos/fondos/', null=True, blank=True)
-    logo_personalizado = models.ImageField(upload_to='eventos/logos/', null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     guardado_como_borrador = models.BooleanField(default=True)
-    ultimo_guardado = models.DateTimeField(auto_now=True)  # Nuevo campo
+    ultimo_guardado = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return f"{self.titulo} ({self.get_tipo_display()})"
+    
+    def get_config_diseno(self):
+        if self.plantilla:
+            return self.plantilla.config_diseno
+        return {}
 
 class Invitacion(models.Model):
     ESTADOS = (
