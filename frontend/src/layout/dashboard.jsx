@@ -14,6 +14,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import { Outlet, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { useAuth } from "../context/AuthContext";
+import EventIcon from '@mui/icons-material/Event';
 
 const drawerWidth = 240;
 
@@ -28,21 +29,6 @@ const DashboardLayout = () => {
         setMobileOpen(!mobileOpen);
     };
 
-    const handleLogout = () => {
-        Swal.fire({
-            title: "¿Quieres cerrar sesión?",
-            text: "Regresarás a la pantalla de inicio.",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Sí",
-            cancelButtonText: "Cancelar",
-        }).then((result) => {
-            if (result.isConfirmed) {
-                logout();
-            }
-        });
-    };
-
     const drawer = (
         <div>
             <Toolbar />
@@ -52,6 +38,12 @@ const DashboardLayout = () => {
                         <DashboardIcon sx={{ color: "var(--beige-dark)" }} />
                     </ListItemIcon>
                     <ListItemText  primary="Inicio" />
+                </ListItem>
+                  <ListItem button  onClick={() => navigate("/app/event")}  style={{ cursor: "pointer" }}>
+                    <ListItemIcon>
+                        <EventIcon sx={{ color: "var(--beige-dark)" }} />
+                    </ListItemIcon>
+                    <ListItemText primary="Eventos" />
                 </ListItem>
                 <ListItem button  onClick={() => navigate("/app/create-invitation")}  style={{ cursor: "pointer" }}>
                     <ListItemIcon>
@@ -136,7 +128,6 @@ const DashboardLayout = () => {
                     </Typography>
                 </Toolbar>
             </AppBar>
-
             <Drawer
                 variant="permanent"
                 sx={{
@@ -150,7 +141,6 @@ const DashboardLayout = () => {
             >
                 {drawer}
             </Drawer>
-
             <Drawer
                 variant="temporary"
                 open={mobileOpen}
@@ -169,8 +159,8 @@ const DashboardLayout = () => {
             <Box component="main"
                 sx={{
                     flexGrow: 1,
-                    width: { sm: `calc(100% - ${drawerWidth}px)` }, // ← clave
-                    ml: { sm: `${drawerWidth}px` }, // ← añade margen para compensar el Drawer
+                    width: { sm: `calc(100% - ${drawerWidth}px)` }, 
+                    ml: { sm: `${drawerWidth}px` },
                 }}>
                 <Toolbar />
                 <Outlet />

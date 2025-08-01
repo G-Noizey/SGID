@@ -11,13 +11,13 @@ import DesignServicesIcon from "@mui/icons-material/DesignServices";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import EmailIcon from "@mui/icons-material/Email";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const HomePage = () => {
+  const navigate = useNavigate();
   return (
-    <Box sx={{ display: "flex",  padding: 3, backgroundColor: "var(--beige-light)" }}>
+    <Box sx={{ display: "flex",  padding: 3, backgroundColor: "var(--beige-light)", flexDirection: "column",  minHeight: "100vh", }}>
      <CssBaseline />
       <motion.div
         initial={{ opacity: 0, y: 50 }}
@@ -40,10 +40,10 @@ const HomePage = () => {
             <Paper sx={{ p: 3, borderRadius: 4 }} elevation={3}>
               <GroupIcon sx={{ fontSize: 40, color: "var(--beige-primary)" }} />
               <Typography variant="h6" sx={{ mt: 2 }}>
-                Clientes, Invitados y Roles
+               Crear invitación
               </Typography>
-              <Button variant="outlined" sx={{ mt: 2 }}>
-                Gestionar
+              <Button variant="outlined" sx={{ mt: 2 }} onClick={() => navigate("/app/create-invitation")}>
+                Crear
               </Button>
             </Paper>
           </Grid>
@@ -67,7 +67,7 @@ const HomePage = () => {
               <Typography variant="h6" sx={{ mt: 2 }}>
                 Envío por Correo y WhatsApp
               </Typography>
-              <Button variant="outlined" sx={{ mt: 2 }}>
+              <Button variant="outlined" sx={{ mt: 2 }} onClick={() => navigate("/app/send-invitation")}>
                 Enviar
               </Button>
             </Paper>
@@ -79,43 +79,18 @@ const HomePage = () => {
               <Typography variant="h6" sx={{ mt: 2 }}>
                 Confirmación de Asistencia
               </Typography>
-              <Button variant="outlined" sx={{ mt: 2 }}>
+              <Button variant="outlined" sx={{ mt: 2 }} onClick={() => navigate("/app/confirmaciones")}>
                 Ver Respuestas
               </Button>
             </Paper>
           </Grid>
-
-          <Grid item xs={12} md={6} lg={4}>
-            <Paper sx={{ p: 3, borderRadius: 4 }} elevation={3}>
-              <VisibilityIcon sx={{ fontSize: 40, color: "var(--beige-primary)" }} />
-              <Typography variant="h6" sx={{ mt: 2 }}>
-                Seguimiento de Correos
-              </Typography>
-              <Button variant="outlined" sx={{ mt: 2 }}>
-                Ver Seguimiento
-              </Button>
-            </Paper>
-          </Grid>
-
           <Grid item xs={12} md={6} lg={4}>
             <Paper sx={{ p: 3, borderRadius: 4 }} elevation={3}>
               <PictureAsPdfIcon sx={{ fontSize: 40, color: "var(--beige-primary)" }} />
               <Typography variant="h6" sx={{ mt: 2 }}>
                 Exportar Invitación PDF/PNG
               </Typography>
-              <Button variant="outlined" sx={{ mt: 2 }}>
-                Exportar
-              </Button>
-            </Paper>
-          </Grid>
-
-          <Grid item xs={12} md={6} lg={4}>
-            <Paper sx={{ p: 3, borderRadius: 4 }} elevation={3}>
-              <FileDownloadIcon sx={{ fontSize: 40, color: "var(--beige-primary)" }} />
-              <Typography variant="h6" sx={{ mt: 2 }}>
-                Listado de Confirmaciones
-              </Typography>
-              <Button variant="outlined" sx={{ mt: 2 }}>
+              <Button variant="outlined" sx={{ mt: 2 }} onClick={() => navigate("/app/event")}>
                 Exportar
               </Button>
             </Paper>
