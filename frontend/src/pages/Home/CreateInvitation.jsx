@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography, Paper, Button, CircularProgress } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { getPlantillasTemporales, createPlantillaTemporal } from '../../services/plantillas.service';
+import { getPlantillasTemporales, createPlantillaTemporal, updatePlantilla} from '../../services/plantillas.service';
 import { createEvento } from '../../services/eventos.service';
 import EventForm from './components/EventForm';
 import Swal from 'sweetalert2';
@@ -24,6 +24,41 @@ const CreateInvitation = () => {
   const [submitting, setSubmitting] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [showTemplateForm, setShowTemplateForm] = useState(false);
+  {
+    /********* EDITAR PLANTILLA *********/
+  }
+  const [isEditingTemplate, setIsEditingTemplate] = useState(false);
+
+  const handleTemplateUpdate = async (updatedTemplateData) => {
+    if (!selectedTemplate) return;
+    try {
+      setSubmitting(true);
+      const updated = await updatePlantilla(
+        selectedTemplate.id,
+        updatedTemplateData
+      );
+
+      setPlantillas((prev) => ({
+        ...prev,
+        results: prev.results.map((p) =>
+          p.id === updated.id ? { ...p, ...updated } : p
+        ),
+      }));
+
+      setSelectedTemplate(updated);
+      setFormData((prev) => ({ ...prev, plantilla: updated.id }));
+      setIsEditingTemplate(false);
+      Swal.fire("Éxito", "Plantilla actualizada correctamente", "success");
+    } catch (error) {
+      console.error("Error updating template:", error);
+      Swal.fire("Error", "No se pudo actualizar la plantilla.", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  {
+    /********* EDITAR PLANTILLA *********/
+  }
 
   useEffect(() => {
     const loadPlantillas = async () => {
@@ -164,6 +199,12 @@ const CreateInvitation = () => {
               onSubmit={handleTemplateCreated} 
               onCancel={() => setShowTemplateForm(false)}
             />
+          ) : isEditingTemplate && selectedTemplate ? (
+            <CreateTemplateForm
+              onSubmit={handleTemplateUpdate}
+              onCancel={() => setIsEditingTemplate(false)}
+              initialData={selectedTemplate}
+            />
           ) : (
             <>
               <EventForm
@@ -175,13 +216,14 @@ const CreateInvitation = () => {
                 selectedTemplate={selectedTemplate}
               />
               
-              <Button 
-                variant="outlined" 
-                sx={{ mt: 2 }}
-                onClick={() => setShowTemplateForm(true)}
-              >
-                Crear Nueva Plantilla
-              </Button>
+              <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                <Button onClick={() => setShowTemplateForm(true)} variant="outlined">
+                  Crear Nueva Plantilla
+                </Button>
+                <Button onClick={() => setIsEditingTemplate(true)} variant="outlined" disabled={!selectedTemplate}>
+                  Editar Plantilla Seleccionada
+                </Button>
+              </Box>
               
               {selectedTemplate && (
                 <Box sx={{ mt: 4 }}>
@@ -194,7 +236,7 @@ const CreateInvitation = () => {
             </>
           )}
 
-          {!showTemplateForm && (
+          {!showTemplateForm && !isEditingTemplate &&(
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
               <Button
                 variant="contained"

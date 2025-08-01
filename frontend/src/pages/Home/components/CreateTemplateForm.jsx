@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect} from 'react';
 import { 
   Box,
   Button,
@@ -189,10 +189,29 @@ const defaultElements = [
   { id: 'location', type: 'text', content: 'Lugar: [Ubicación]' }
 ];
 
-const CreateTemplateForm = ({ onSubmit, onCancel }) => {
+const CreateTemplateForm = ({ onSubmit, onCancel, initialData }) => {
   const [templateName, setTemplateName] = useState('');
   const [elements, setElements] = useState(defaultElements);
   const [editingElementId, setEditingElementId] = useState(null);
+
+  useEffect(() => {
+    if (initialData) {
+      setTemplateName(initialData.nombre || '');
+      setElements(initialData.config_diseno?.elementos || []);
+      setColors(initialData.config_diseno?.colores || defaultColors);
+      setFonts(initialData.config_diseno?.fuentes || defaultFonts);
+    }
+  }, [initialData]);
+
+  const defaultColors = {
+  primary: '#4a2c82',
+  secondary: '#f8e5ff',
+  text: '#333333'
+};
+const defaultFonts = {
+  titulo: 'Georgia',
+  cuerpo: 'Arial'
+};
   const [colors, setColors] = useState({
     primary: '#4a2c82',
     secondary: '#f8e5ff',

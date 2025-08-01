@@ -6,7 +6,7 @@ import {
   Button, CssBaseline,
 } from "@mui/material";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
-import GroupIcon from "@mui/icons-material/Group";
+import EventIcon from '@mui/icons-material/Event';
 import DesignServicesIcon from "@mui/icons-material/DesignServices";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import EmailIcon from "@mui/icons-material/Email";
@@ -38,7 +38,7 @@ const HomePage = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={6} lg={4}>
             <Paper sx={{ p: 3, borderRadius: 4 }} elevation={3}>
-              <GroupIcon sx={{ fontSize: 40, color: "var(--beige-primary)" }} />
+              <EventIcon sx={{ fontSize: 40, color: "var(--beige-primary)" }} />
               <Typography variant="h6" sx={{ mt: 2 }}>
                Crear invitación
               </Typography>
@@ -48,7 +48,7 @@ const HomePage = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={6} lg={4}>
+          {/* <Grid item xs={12} md={6} lg={4}>
             <Paper sx={{ p: 3, borderRadius: 4 }} elevation={3}>
               <DesignServicesIcon sx={{ fontSize: 40, color: "var(--beige-primary)" }} />
               <Typography variant="h6" sx={{ mt: 2 }}>
@@ -58,7 +58,7 @@ const HomePage = () => {
                 Personalizar
               </Button>
             </Paper>
-          </Grid>
+          </Grid> */}
 
           <Grid item xs={12} md={6} lg={4}>
             <Paper sx={{ p: 3, borderRadius: 4 }} elevation={3}>
