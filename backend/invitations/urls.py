@@ -3,6 +3,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import PlantillaViewSet, EventoViewSet, InvitacionViewSet, ConfirmacionViewSet
 from .views import ExportarConfirmacionesView
+from .views import GenerarPDFView
+from .views import GenerarPNGView
 
 router = DefaultRouter()
 router.register(r'plantillas', PlantillaViewSet, basename='plantilla')
@@ -15,4 +17,6 @@ urlpatterns = [
     path('eventos/<int:evento_id>/exportar-confirmaciones/', 
          ExportarConfirmacionesView.as_view(), 
          name='exportar_confirmaciones'),
+    path('generar-pdf/', GenerarPDFView.as_view(), name='generar_pdf'),
+    path('generar-png/', GenerarPNGView.as_view(), name='generar-png'),
 ]

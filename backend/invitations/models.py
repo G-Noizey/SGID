@@ -48,6 +48,16 @@ class Evento(models.Model):
         return {}
 
 class Invitacion(models.Model):
+    METODOS_ENVIO = [
+        ('email', 'Email'),
+        ('whatsapp', 'WhatsApp'),
+    ]
+    
+    metodo_envio = models.CharField(
+        max_length=10,
+        choices=METODOS_ENVIO,
+        default='email'
+    )
     ESTADOS = (
         ('pendiente', 'Pendiente'),
         ('enviada', 'Enviada'),

@@ -14,6 +14,8 @@ from django.conf import settings
 from .services import enviar_correo, enviar_whatsapp
 import base64
 from django.core.files.base import ContentFile
+from .pdf_generator import generar_pdf_desde_json
+from .pdf_generator import generar_png_desde_json  # importa si aún no lo has hecho
 
 class PlantillaViewSet(viewsets.ModelViewSet):
     """
@@ -79,8 +81,10 @@ class EventoViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
 
     def get_queryset(self):
-        """Solo eventos del usuario actual"""
-        return models.Evento.objects.filter(usuario=self.request.user)
+        """Solo eventos del usuario actual con orden definido"""
+        return models.Evento.objects.filter(
+            usuario=self.request.user
+        ).order_by('-fecha_creacion')  # <- Aquí está el cambio clave
 
     def perform_create(self, serializer):
         """Asigna automáticamente el usuario creador"""
@@ -136,28 +140,97 @@ class InvitacionViewSet(viewsets.ModelViewSet):
     def _enviar_invitacion(self, invitacion):
         """Lógica común para enviar invitaciones"""
         evento = invitacion.evento
-        mensaje = (
-            f"¡Hola {invitacion.destinatario_nombre}!\n\n"
-            f"Estás invitado a {evento.titulo} el {evento.fecha_evento.strftime('%d/%m/%Y')}.\n"
-            f"Ubicación: {evento.ubicacion}\n\n"
-            f"Por favor confirma tu asistencia aquí: {settings.BASE_URL}/confirmar/{invitacion.enlace_unico}"
-        )
-        
+        config_diseno = evento.get_config_diseno()
+    
+        imagen_base64 = None
+        try:
+            for el in config_diseno.get('elementos', []):
+                if el.get('type') == 'image':
+                    content = el.get('content')
+                    if isinstance(content, dict) and 'data' in content and 'type' in content:
+                        # Construir data URI con mime-type y base64
+                        imagen_base64 = f"data:{content['type']};base64,{content['data']}"
+                    elif isinstance(content, str) and content.startswith("data:image"):
+                        imagen_base64 = content
+                    elif isinstance(content, str):
+                        # Caso base64 sin encabezado
+                        imagen_base64 = f"data:image/jpeg;base64,{content}"
+                    break  # Solo la primera imagen
+        except Exception as e:
+            print(f"[WARN] No se pudo extraer imagen del evento: {e}")
+
+    
+        # Construir HTML
+        mensaje_html = f"""
+        <html>
+          <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9;">
+            <div style="max-width: 600px; margin: auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <h2 style="color: #333;">Hola {invitacion.destinatario_nombre},</h2>
+              <p>¡Estás invitado al siguiente evento!</p>
+    
+              <h3 style="color: #2E8B57;">{evento.titulo}</h3>
+              <p>{evento.descripcion}</p>
+        """
+    
+        if imagen_base64:
+            mensaje_html += f"""
+              <div style="text-align: center; margin: 20px 0;">
+                <img src="{imagen_base64}" alt="Imagen del evento"
+                     style="max-width: 100%; height: auto; border-radius: 10px;" />
+              </div>
+            """
+
+    
+        mensaje_html += f"""
+              <p><strong>Fecha:</strong> {evento.fecha_evento.strftime('%d/%m/%Y')}<br>
+                 <strong>Ubicación:</strong> {evento.ubicacion}</p>
+    
+              <p style="margin-top: 20px;">Confirma tu asistencia aquí:</p>
+              <p style="text-align: center;">
+                <a href="{settings.BASE_URL}/confirmar/{invitacion.enlace_unico}" 
+                   style="padding: 10px 20px; background-color: #2E8B57; color: #fff; text-decoration: none; border-radius: 5px;">
+                  Confirmar asistencia
+                </a>
+              </p>
+    
+              <p style="font-size: 12px; color: #888;">
+                Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
+                <a href="{settings.BASE_URL}/confirmar/{invitacion.enlace_unico}">{settings.BASE_URL}/confirmar/{invitacion.enlace_unico}</a>
+              </p>
+            </div>
+          </body>
+        </html>
+        """
+    
+        print(f"[DEBUG] Método de envío: {invitacion.metodo_envio}")
+        print(f"[DEBUG] Teléfono destino: {invitacion.destinatario_telefono}")
         if invitacion.metodo_envio == 'email' and invitacion.destinatario_email:
             enviar_correo(
                 destinatario=invitacion.destinatario_email,
                 asunto=f"Invitación a {evento.titulo}",
-                mensaje=mensaje
+                mensaje_html=mensaje_html
             )
+    
+        # Envío por WhatsApp
         elif invitacion.metodo_envio == 'whatsapp' and invitacion.destinatario_telefono:
+            mensaje_texto = (
+                f"🎉 ¡Hola {invitacion.destinatario_nombre}!\n\n"
+                f"Estás invitado a *{evento.titulo}*.\n"
+                f"{evento.descripcion}\n\n"
+                f"📅 Fecha: {evento.fecha_evento.strftime('%d/%m/%Y')}\n"
+                f"📍 Ubicación: {evento.ubicacion}\n\n"
+                f"✅ Confirma aquí: {settings.BASE_URL}/confirmar/{invitacion.enlace_unico}"
+            )
             enviar_whatsapp(
                 numero=invitacion.destinatario_telefono,
-                mensaje=mensaje
+                mensaje=mensaje_texto
             )
-        
+    
         invitacion.estado = 'enviada'
         invitacion.fecha_envio = timezone.now()
         invitacion.save()
+
+
 
     @action(detail=True, methods=['post'])
     def enviar(self, request, pk=None):
@@ -211,34 +284,85 @@ class InvitacionViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'])
     def enviar_masivo(self, request):
-        """Envía múltiples invitaciones a la vez"""
         try:
             evento_id = request.data.get('evento_id')
+            metodo_envio_global = request.data.get('metodo_envio', 'email')  # Default a email
             destinatarios = request.data.get('destinatarios', [])
             
-            evento = models.Evento.objects.get(id=evento_id, usuario=request.user)
-            invitaciones_creadas = []
+            # Validaciones básicas
+            if not evento_id:
+                return Response({'error': 'Se requiere el ID del evento'}, status=400)
+                
+            if not destinatarios or not isinstance(destinatarios, list):
+                return Response({'error': 'Se requiere una lista válida de destinatarios'}, status=400)
             
-            for destinatario in destinatarios:
-                invitacion = models.Invitacion.objects.create(
-                    evento=evento,
-                    destinatario_nombre=destinatario['nombre'],
-                    destinatario_email=destinatario.get('email'),
-                    destinatario_telefono=destinatario.get('telefono'),
-                    metodo_envio=destinatario.get('metodo_envio', 'email')
-                )
-                invitaciones_creadas.append(invitacion.id)
-                self._enviar_invitacion(invitacion)
+            # Obtener el evento
+            try:
+                evento = models.Evento.objects.get(id=evento_id, usuario=request.user)
+            except models.Evento.DoesNotExist:
+                return Response({'error': 'Evento no encontrado o no autorizado'}, status=404)
             
+            resultados = {
+                'exitosos': [],
+                'fallidos': []
+            }
+            
+            for index, dest in enumerate(destinatarios):
+                try:
+                    # Validar datos del destinatario
+                    if not dest.get('nombre'):
+                        raise ValueError("Nombre es requerido")
+                        
+                    # Determinar método de envío
+                    metodo_envio = dest.get('metodo_envio', metodo_envio_global)
+                    
+                    # Validar contacto según método
+                    if metodo_envio == 'email' and not dest.get('email'):
+                        raise ValueError("Email requerido para envío por correo")
+                    elif metodo_envio == 'whatsapp' and not dest.get('telefono'):
+                        raise ValueError("Teléfono requerido para envío por WhatsApp")
+                    
+                    # Crear invitación
+                    invitacion = models.Invitacion.objects.create(
+                        evento=evento,
+                        destinatario_nombre=dest['nombre'],
+                        destinatario_email=dest.get('email'),
+                        destinatario_telefono=dest.get('telefono'),
+                        metodo_envio=metodo_envio,
+                        max_acompanantes=dest.get('max_acompanantes', 0)
+                    )
+                    
+                    # Enviar invitación
+                    self._enviar_invitacion(invitacion)
+                    
+                    resultados['exitosos'].append({
+                        'indice': index,
+                        'id': invitacion.id,
+                        'destinatario': dest['nombre']
+                    })
+                    
+                except Exception as e:
+                    resultados['fallidos'].append({
+                        'indice': index,
+                        'destinatario': dest.get('nombre', 'Sin nombre'),
+                        'error': str(e)
+                    })
+                    continue
+                
             return Response({
-                'status': f'{len(invitaciones_creadas)} invitaciones enviadas',
-                'invitaciones': invitaciones_creadas
+                'status': 'completed',
+                'total': len(destinatarios),
+                'exitosos': len(resultados['exitosos']),
+                'fallidos': len(resultados['fallidos']),
+                'detalles': resultados
             })
+            
         except Exception as e:
-            return Response(
-                {'error': str(e)}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({
+                'error': 'Error interno del servidor',
+                'detail': str(e)
+            }, status=500)
+
 
 class ConfirmacionViewSet(viewsets.ModelViewSet):
     """
@@ -334,3 +458,33 @@ class ExportarConfirmacionesView(APIView):
                 {'error': str(e)}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class GenerarPDFView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            print("Datos recibidos para PDF:", request.data)  # Log para diagnóstico
+            pdf = generar_pdf_desde_json(request.data)
+            response = HttpResponse(pdf, content_type='application/pdf')
+            response['Content-Disposition'] = 'attachment; filename="invitacion.pdf"'
+            return response
+        except Exception as e:
+            print("Error generando PDF:", str(e))  # Log detallado
+            return Response(
+                {'error': str(e), 'detail': 'Error al generar PDF'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+class GenerarPNGView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            data = request.data
+            png = generar_png_desde_json(data)
+            response = HttpResponse(png, content_type='image/png')
+            response['Content-Disposition'] = 'attachment; filename="invitacion.png"'
+            return response
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)

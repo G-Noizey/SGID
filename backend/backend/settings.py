@@ -140,15 +140,16 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'  # O tu servidor SMTP
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'tu_correo@gmail.com'  # Cambiar por tu email
-EMAIL_HOST_PASSWORD = 'tu_contraseña'  # Cambiar por tu contraseña
+EMAIL_HOST_USER = '20213tn033@utez.edu.mx'  # Cambiar por tu email
+EMAIL_HOST_PASSWORD = ''  # Cambiar por tu contraseña
+BASE_URL = "http://localhost:3000"
 
 #TIENES QUE CREAR UNA LLAVE DE SEGURIDAD SECRETKEY DE GOOGLE PARA USARLA COMO PASSWORD
 
 
 # Configuración de WhatsApp (Twilio)
-TWILIO_ACCOUNT_SID = 'tu_account_sid'
-TWILIO_AUTH_TOKEN = 'tu_auth_token'
+TWILIO_ACCOUNT_SID = ''
+TWILIO_AUTH_TOKEN = ''
 TWILIO_WHATSAPP_NUMBER = 'whatsapp:+14155238886'  # Número de sandbox de Twilio
 
 
