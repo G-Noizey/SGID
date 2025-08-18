@@ -12,23 +12,23 @@ const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  
-  try {
-    const success = await login(credentials);
-    if (success) {
-      toast.success('¡Bienvenido!');
-      // Redirección segura con timeout para que se vea el toast
-      setTimeout(() => navigate('/app'), 1500);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const success = await login(credentials);
+      if (success) {
+        toast.success('¡Bienvenido!');
+        // Redirección segura con timeout para que se vea el toast
+        setTimeout(() => navigate('/app'), 1500);
+      }
+    } catch (error) {
+      toast.error('Credenciales incorrectas');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    toast.error('Credenciales incorrectas');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <Container fluid className="login-container">
@@ -40,7 +40,7 @@ const LoginPage = () => {
             <p className="login-slogan">Sistema de Gestión de Invitaciones Digitales</p>
           </div>
         </Col>
-        
+
         {/* Panel derecho - Formulario */}
         <Col md={6} className="d-flex align-items-center">
           <div className="login-form-container w-100">
@@ -48,44 +48,44 @@ const LoginPage = () => {
               <h1 className="login-title">BIENVENIDO</h1>
               <p className="login-subtitle">Ingresa tus credenciales para continuar</p>
             </div>
-            
+
             <Form onSubmit={handleSubmit}>
 
-            <Form.Group>
-                <Form.Label className="login-label">Usuario</Form.Label>
-                <Form.Control 
-                    type="text" 
-                    placeholder="Coloca tu nombre de usuario"
-                    value={credentials.username}  // Corregido: usa credentials.username
-                    onChange={(e) => setCredentials({...credentials, username: e.target.value})}  // Corregido: actualiza username
-                    required
-                    className="login-input"
-                />
-              </Form.Group>   
-              
               <Form.Group>
-                <Form.Label className="login-label">Contraseña</Form.Label>
-                <Form.Control 
-                  type="password" 
-                  placeholder="Tu contraseña"
-                  value={credentials.password}
-                  onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+                <Form.Label className="login-label">Usuario</Form.Label>
+                <Form.Control
+                  type="text"
+                  placeholder="Coloca tu nombre de usuario"
+                  value={credentials.username}  // Corregido: usa credentials.username
+                  onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}  // Corregido: actualiza username
                   required
                   className="login-input"
                 />
               </Form.Group>
-              
-              <Button 
-                variant="link" 
+
+              <Form.Group>
+                <Form.Label className="login-label">Contraseña</Form.Label>
+                <Form.Control
+                  type="password"
+                  placeholder="Tu contraseña"
+                  value={credentials.password}
+                  onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                  required
+                  className="login-input"
+                />
+              </Form.Group>
+
+              <Button
+                variant="link"
                 className="login-forgot-password"
-                onClick={() => toast.info('Funcionalidad en desarrollo')}
+                onClick={() => navigate('/forgot-password')}
               >
                 ¿Olvidaste tu contraseña?
               </Button>
-              
-              <Button 
-                variant="primary" 
-                type="submit" 
+
+              <Button
+                variant="primary"
+                type="submit"
                 className="login-button"
                 disabled={loading}
               >
@@ -94,11 +94,11 @@ const LoginPage = () => {
                 ) : null}
                 INICIAR SESIÓN
               </Button>
-              
+
               <div className="login-register-container">
                 <p className="login-register-text">¿No tienes una cuenta?</p>
-                <Button 
-                  variant="outline-primary" 
+                <Button
+                  variant="outline-primary"
                   className="login-register-button"
                   onClick={() => navigate('/register')}
                 >
