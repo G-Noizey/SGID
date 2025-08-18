@@ -9,6 +9,8 @@ import Setting from './pages/Home/Setting';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './layout/dashboard';
 import Event from './pages/Home/Event';
+import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/Auth/ResetPasswordPage';
 
 const router = createBrowserRouter([
   {
@@ -16,19 +18,21 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <LoginPage /> },
       { path: 'login', element: <LoginPage /> },
-      { path: 'register', element: <RegisterPage /> }
+      { path: 'register', element: <RegisterPage /> },
+      { path: 'forgot-password', element: <ForgotPasswordPage /> },
+      { path: 'reset-password/:uid/:token', element: <ResetPasswordPage /> }
     ]
   },
   {
     path: '/app',
-    element: <ProtectedRoute />, // Protege la ruta completa
+    element: <ProtectedRoute />,
     children: [
       {
         path: '',
-        element: <DashboardLayout />, // Contiene AppBar + Drawer + <Outlet />
+        element: <DashboardLayout />,
         children: [
-          { index: true, element: <HomePage /> }, // /app
-          { path: 'confirmaciones', element: <Confirmation /> }, // /app/confirmaciones
+          { index: true, element: <HomePage /> },
+          { path: 'confirmaciones', element: <Confirmation /> },
           { path: 'create-invitation', element: <CreateInvitation /> },
           { path: 'send-invitation', element: <SendInvitation /> },
           { path: 'event', element: <Event /> },
@@ -38,5 +42,6 @@ const router = createBrowserRouter([
     ]
   }
 ]);
+
 
 export default router;

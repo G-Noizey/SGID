@@ -135,17 +135,17 @@ if not DEBUG:
         "https://www.tudominio.com",
     ]
 
+# link al frontend (React)
+FRONTEND_URL = "http://localhost:5173" 
+
 # Configuración de Email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'  # O tu servidor SMTP
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = '20213tn033@utez.edu.mx'  # Cambiar por tu email
-EMAIL_HOST_PASSWORD = ''  # Cambiar por tu contraseña
+EMAIL_HOST_USER = 'sgi832034@gmail.com'  # Cambiar por tu email
+EMAIL_HOST_PASSWORD = 'mofryrawvclecdal'
 BASE_URL = "http://localhost:3000"
-
-#TIENES QUE CREAR UNA LLAVE DE SEGURIDAD SECRETKEY DE GOOGLE PARA USARLA COMO PASSWORD
-
 
 # Configuración de WhatsApp (Twilio)
 TWILIO_ACCOUNT_SID = ''
