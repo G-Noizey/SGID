@@ -1,156 +1,125 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Paper, 
-  Chip,
-  Divider
-} from '@mui/material';
-import { styled } from '@mui/material/styles';
-
-const PreviewContainer = styled(Paper)(({ theme }) => ({
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: theme.shape.borderRadius,
-  padding: theme.spacing(2),
-  marginTop: theme.spacing(2),
-  backgroundColor: theme.palette.background.paper,
-}));
-
-const ColorBadge = styled(Box)(({ color }) => ({
-  width: 24,
-  height: 24,
-  borderRadius: '50%',
-  backgroundColor: color,
-  display: 'inline-block',
-  marginRight: 8,
-  border: '1px solid #ddd'
-}));
+import React, { useEffect, useState } from 'react';
+import { Stage, Layer, Text, Image as KonvaImage, Rect, Circle, Line } from 'react-konva';
+import { Box, Paper, Typography } from '@mui/material';
 
 const TemplatePreview = ({ template }) => {
-  const [imageLoadError, setImageLoadError] = useState({});
-  
-  const handleImageError = (index) => {
-    setImageLoadError(prev => ({ ...prev, [index]: true }));
+  const [elements, setElements] = useState([]);
+
+  useEffect(() => {
+    if (template?.config_diseno?.elements) {
+      const loadImages = async () => {
+        const elementsWithImages = await Promise.all(
+          template.config_diseno.elements.map(async (element) => {
+            if (element.type === 'image' && element.src) {
+              return new Promise((resolve) => {
+                const img = new window.Image();
+                img.src = element.src;
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                  resolve({ ...element, imageObject: img });
+                };
+                img.onerror = () => {
+                  resolve(element);
+                };
+              });
+            }
+            return element;
+          })
+        );
+        setElements(elementsWithImages);
+      };
+
+      loadImages();
+    }
+  }, [template]);
+
+  const renderElement = (element) => {
+    switch (element.type) {
+      case 'text':
+        return (
+          <Text
+            key={element.id}
+            x={element.x}
+            y={element.y}
+            text={element.text}
+            fontSize={element.fontSize}
+            fontFamily={element.fontFamily}
+            fill={element.fill}
+          />
+        );
+      case 'image':
+        return element.imageObject ? (
+          <KonvaImage
+            key={element.id}
+            x={element.x}
+            y={element.y}
+            width={element.width}
+            height={element.height}
+            image={element.imageObject}
+          />
+        ) : null;
+      case 'rect':
+        return (
+          <Rect
+            key={element.id}
+            x={element.x}
+            y={element.y}
+            width={element.width}
+            height={element.height}
+            fill={element.fill}
+            stroke={element.stroke}
+            strokeWidth={element.strokeWidth}
+          />
+        );
+      case 'circle':
+        return (
+          <Circle
+            key={element.id}
+            x={element.x}
+            y={element.y}
+            radius={element.radius}
+            fill={element.fill}
+            stroke={element.stroke}
+            strokeWidth={element.strokeWidth}
+          />
+        );
+      case 'line':
+        return (
+          <Line
+            key={element.id}
+            points={element.points}
+            stroke={element.stroke}
+            strokeWidth={element.strokeWidth}
+          />
+        );
+      default:
+        return null;
+    }
   };
 
-  if (!template) return null;
+  if (!template) {
+    return (
+      <Paper elevation={2} sx={{ p: 2, textAlign: 'center' }}>
+        <Typography>No hay plantilla seleccionada</Typography>
+      </Paper>
+    );
+  }
+
+  const { width = 600, height = 800 } = template.config_diseno || {};
 
   return (
-    <PreviewContainer elevation={0}>
+    <Paper elevation={2} sx={{ p: 2 }}>
       <Typography variant="h6" gutterBottom>
-        {template.nombre}
+        Vista Previa: {template.nombre}
       </Typography>
-      
-      <Divider sx={{ my: 2 }} />
-      
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Configuración de diseño:
-        </Typography>
-        
-        {template.config_diseno?.colores && (
-          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-            <Typography variant="body2">Colores:</Typography>
-            {Object.entries(template.config_diseno.colores).map(([name, color]) => (
-              <Chip
-                key={name}
-                label={name}
-                avatar={<ColorBadge color={color} />}
-                size="small"
-                sx={{ mr: 1 }}
-              />
-            ))}
-          </Box>
-        )}
-        
-        {template.config_diseno?.fuentes && (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" gutterBottom>
-              Fuentes:
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              {Object.entries(template.config_diseno.fuentes).map(([name, font]) => (
-                <Chip
-                  key={name}
-                  label={`${name}: ${font}`}
-                  size="small"
-                />
-              ))}
-            </Box>
-          </Box>
-        )}
+      <Box sx={{ overflow: 'auto', maxWidth: '100%' }}>
+        <Stage width={width} height={height} style={{ border: '1px solid #ccc' }}>
+          <Layer>
+            {elements.map((element) => renderElement(element))}
+          </Layer>
+        </Stage>
       </Box>
-      
-      <Typography variant="subtitle1" gutterBottom>
-        Vista previa:
-      </Typography>
-      <Box
-        sx={{ 
-          border: '1px solid #eee',
-          borderRadius: 1,
-          p: 2,
-          minHeight: 200,
-          backgroundColor: template.config_diseno?.colores?.secondary || '#fff'
-        }}
-      >
-        {template.config_diseno?.elementos?.map((elemento, index) => (
-          <Box 
-            key={index} 
-            sx={{ 
-              textAlign: elemento.type === 'header' ? 'center' : 'left',
-              mb: 2,
-              color: template.config_diseno.colores?.text || '#000',
-              fontFamily: elemento.type === 'header' 
-                ? template.config_diseno.fuentes?.titulo 
-                : template.config_diseno.fuentes?.cuerpo
-            }}
-          >
-            {elemento.type === 'image' ? (
-              elemento.content && !imageLoadError[index] ? (
-                <Box sx={{ textAlign: 'center', my: 2 }}>
-                  <img 
-                    src={`data:image/png;base64,${elemento.content}`} 
-                    alt={`Imagen ${index}`}
-                    onError={() => handleImageError(index)}
-                    style={{ 
-                      maxWidth: '100%', 
-                      maxHeight: '200px',
-                      objectFit: 'contain'
-                    }} 
-                  />
-                </Box>
-              ) : (
-                <Box sx={{ 
-                  height: 150, 
-                  bgcolor: '#f0f0f0', 
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '1px dashed #ccc',
-                  borderRadius: 1
-                }}>
-                  <Typography variant="body2" color="textSecondary">
-                    {elemento.content ? 'Error al cargar imagen' : 'Imagen no disponible'}
-                  </Typography>
-                </Box>
-              )
-            ) : (
-              <Typography 
-                variant={elemento.type === 'header' ? 'h4' : 'body1'}
-                sx={{
-                  fontFamily: elemento.type === 'header' 
-                    ? template.config_diseno.fuentes?.titulo 
-                    : template.config_diseno.fuentes?.cuerpo,
-                  color: template.config_diseno.colores?.text || '#000'
-                }}
-              >
-                {elemento.content}
-              </Typography>
-            )}
-          </Box>
-        ))}
-      </Box>
-    </PreviewContainer>
+    </Paper>
   );
 };
 

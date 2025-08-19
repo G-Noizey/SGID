@@ -52,15 +52,13 @@ const TemplateSelect = ({ plantillas = { results: [] }, value, onChange, loading
             }}
           >
             <span>{plantilla.nombre}</span>
-            {plantilla.es_temporal && (
-              <Typography 
-                variant="caption" 
-                color="text.secondary"
-                sx={{ ml: 2 }}
-              >
-                (Temporal)
-              </Typography>
-            )}
+            <Typography 
+              variant="caption" 
+              color="text.secondary"
+              sx={{ ml: 2 }}
+            >
+              {plantilla.es_temporal ? '(Temporal)' : '(Predefinida)'}
+            </Typography>
           </MenuItem>
         ))}
       </Select>

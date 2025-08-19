@@ -1,11 +1,12 @@
-#invitations/models.py
+
+#backend/invitations/models.py
+
+
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator
 import uuid
-from django.utils import timezone  # Añade esta importación
-
-import json
+from django.utils import timezone
 
 class Plantilla(models.Model):
     nombre = models.CharField(max_length=50)
@@ -13,11 +14,26 @@ class Plantilla(models.Model):
     es_publica = models.BooleanField(default=True)
     creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     es_temporal = models.BooleanField(default=False)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)  # Solo auto_now_add
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_expiracion = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.nombre
+
+class Asset(models.Model):
+    """
+    Almacena imágenes (u otros assets) referenciables desde config_diseno.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='assets')
+    file = models.ImageField(upload_to='assets/%Y/%m/%d/')
+    mime_type = models.CharField(max_length=50, blank=True)
+    original_name = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    plantilla = models.ForeignKey(Plantilla, on_delete=models.SET_NULL, null=True, blank=True, related_name='assets')
+
+    def __str__(self):
+        return f"Asset {self.id} ({self.original_name})"
 
 class Evento(models.Model):
     TIPOS_EVENTO = (
@@ -70,7 +86,7 @@ class Invitacion(models.Model):
     )
     
     evento = models.ForeignKey(Evento, on_delete=models.CASCADE, related_name='invitaciones')
-    config_diseno = models.JSONField(null=True, blank=True)  # Añade este campo
+    config_diseno = models.JSONField(null=True, blank=True)
     estado = models.CharField(max_length=50, choices=ESTADOS, default='pendiente')
     fecha_envio = models.DateTimeField(null=True, blank=True)
     enlace_unico = models.CharField(max_length=255, unique=True, default=uuid.uuid4)
@@ -82,7 +98,7 @@ class Invitacion(models.Model):
     max_acompanantes = models.IntegerField(
         default=0,
         validators=[MinValueValidator(0)]
-    )  # Validacion de acompañantes
+    )
     
     def __str__(self):
         return f"Invitación para {self.destinatario_nombre} - {self.evento}"

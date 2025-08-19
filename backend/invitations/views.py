@@ -1,4 +1,3 @@
-# backend/invitations/views.py
 import csv
 import logging
 import uuid
@@ -10,18 +9,25 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from . import models
 from .serializers import (
-    ConfirmacionSerializer,
-    EventoSerializer,
-    InvitacionSerializer,
-    PlantillaSerializer,
+    ConfirmacionSerializer, EventoSerializer, InvitacionSerializer,
+    PlantillaSerializer, AssetSerializer
 )
 from .services import enviar_correo, enviar_whatsapp
 
 logger = logging.getLogger(__name__)
 
+class AssetViewSet(viewsets.ModelViewSet):
+    queryset = models.Asset.objects.all()
+    serializer_class = AssetSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+    def get_queryset(self):
+        return models.Asset.objects.filter(owner=self.request.user)
 
 class PlantillaViewSet(viewsets.ModelViewSet):
     queryset = models.Plantilla.objects.all()
@@ -36,7 +42,7 @@ class PlantillaViewSet(viewsets.ModelViewSet):
         """
         config_diseno = request.data.get("config_diseno", {})
         elementos = config_diseno.get("elementos", [])
-
+        
         for elemento in elementos:
             if elemento.get("type") == "image" and elemento.get("content"):
                 img_data = elemento["content"]
@@ -44,15 +50,15 @@ class PlantillaViewSet(viewsets.ModelViewSet):
                     format, imgstr = img_data.split(";base64,")
                     ext = format.split("/")[-1]
                     elemento["content"] = {
-                        "data": imgstr,               # solo la parte base64
-                        "type": format.split(":")[1], # p.ej. image/png
-                        "extension": ext,             # p.ej. png
+                        "data": imgstr,  # solo la parte base64
+                        "type": format.split(":")[1],  # p.ej. image/png
+                        "extension": ext,  # p.ej. png
                     }
-
+        
         mutable_data = request.data.copy()
         mutable_data["config_diseno"] = config_diseno
         request._full_data = mutable_data  # mantener compatibilidad con DRF
-
+        
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
@@ -73,7 +79,6 @@ class PlantillaViewSet(viewsets.ModelViewSet):
         return models.Plantilla.objects.filter(
             Q(es_publica=True) | Q(es_temporal=True, creado_por=user)
         )
-
 
 class EventoViewSet(viewsets.ModelViewSet):
     serializer_class = EventoSerializer
@@ -111,7 +116,6 @@ class EventoViewSet(viewsets.ModelViewSet):
             {"status": "Progreso guardado", "fecha": evento.ultimo_guardado}
         )
 
-
 class InvitacionViewSet(viewsets.ModelViewSet):
     serializer_class = InvitacionSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -130,40 +134,35 @@ class InvitacionViewSet(viewsets.ModelViewSet):
 
     def _enviar_invitacion(self, invitacion: models.Invitacion):
         """
-        Envía la invitación por correo o WhatsApp
-        (sin generar PNG/PDF, solo texto/HTML con el enlace único).
+        Envía la invitación por correo o WhatsApp (sin generar PNG/PDF, solo texto/HTML con el enlace único).
         """
         evento = invitacion.evento
         enlace = self._link_confirmacion(invitacion)
-
+        
         mensaje_html = f"""
         <html>
-          <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9;">
+        <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9;">
             <div style="max-width: 600px; margin: auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <h2 style="color: #333;">Hola {invitacion.destinatario_nombre},</h2>
-              <p>¡Estás invitado a <strong>{evento.titulo}</strong>!</p>
-              <p>{evento.descripcion or ""}</p>
-
-              <p><strong>Fecha:</strong> {evento.fecha_evento.strftime('%d/%m/%Y')}<br>
-                 <strong>Ubicación:</strong> {evento.ubicacion}</p>
-
-              <p style="margin-top: 20px;">Confirma tu asistencia aquí:</p>
-              <p style="text-align: center;">
-                <a href="{enlace}" 
-                   style="padding: 10px 20px; background-color: #2E8B57; color: #fff; text-decoration: none; border-radius: 5px;">
-                  Confirmar asistencia
-                </a>
-              </p>
-
-              <p style="font-size: 12px; color: #888;">
-                Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
-                <a href="{enlace}">{enlace}</a>
-              </p>
+                <h2 style="color: #333;">Hola {invitacion.destinatario_nombre},</h2>
+                <p>¡Estás invitado a <strong>{evento.titulo}</strong>!</p>
+                <p>{evento.descripcion or ""}</p>
+                <p><strong>Fecha:</strong> {evento.fecha_evento.strftime('%d/%m/%Y')}<br>
+                <strong>Ubicación:</strong> {evento.ubicacion}</p>
+                <p style="margin-top: 20px;">Confirma tu asistencia aquí:</p>
+                <p style="text-align: center;">
+                    <a href="{enlace}" style="padding: 10px 20px; background-color: #2E8B57; color: #fff; text-decoration: none; border-radius: 5px;">
+                        Confirmar asistencia
+                    </a>
+                </p>
+                <p style="font-size: 12px; color: #888;">
+                    Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
+                    <a href="{enlace}">{enlace}</a>
+                </p>
             </div>
-          </body>
+        </body>
         </html>
         """
-
+        
         # Envío por email
         if invitacion.metodo_envio == "email" and invitacion.destinatario_email:
             enviar_correo(
@@ -172,7 +171,7 @@ class InvitacionViewSet(viewsets.ModelViewSet):
                 mensaje_html=mensaje_html,
             )
             logger.info(f"Correo enviado a {invitacion.destinatario_email}")
-
+        
         # Envío por WhatsApp
         elif invitacion.metodo_envio == "whatsapp" and invitacion.destinatario_telefono:
             mensaje_texto = (
@@ -188,7 +187,7 @@ class InvitacionViewSet(viewsets.ModelViewSet):
                 mensaje=mensaje_texto,
             )
             logger.info(f"WhatsApp enviado a {invitacion.destinatario_telefono}")
-
+        
         # Actualizar estado de la invitación
         invitacion.estado = "enviada"
         invitacion.fecha_envio = timezone.now()
@@ -222,7 +221,7 @@ class InvitacionViewSet(viewsets.ModelViewSet):
                 f"Ubicación: {invitacion.evento.ubicacion}\n\n"
                 f"Por favor confirma tu asistencia si aún no lo has hecho: {enlace}"
             )
-
+            
             if invitacion.metodo_envio == "email" and invitacion.destinatario_email:
                 # formato HTML básico para recordatorio
                 mensaje_html = (
@@ -234,14 +233,13 @@ class InvitacionViewSet(viewsets.ModelViewSet):
                     mensaje_html=mensaje_html,
                 )
             elif (
-                invitacion.metodo_envio == "whatsapp"
-                and invitacion.destinatario_telefono
+                invitacion.metodo_envio == "whatsapp" and invitacion.destinatario_telefono
             ):
                 enviar_whatsapp(
                     numero=invitacion.destinatario_telefono,
                     mensaje=mensaje,
                 )
-
+            
             return Response({"status": "Recordatorio enviado"})
         except Exception as e:
             logger.exception("Error al enviar recordatorio")
@@ -260,16 +258,16 @@ class InvitacionViewSet(viewsets.ModelViewSet):
             evento_id = request.data.get("evento_id")
             metodo_envio_global = request.data.get("metodo_envio", "email")
             destinatarios = request.data.get("destinatarios", [])
-
+            
             if not evento_id:
                 return Response({"error": "Se requiere el ID del evento"}, status=400)
-
+            
             if not destinatarios or not isinstance(destinatarios, list):
                 return Response(
                     {"error": "Se requiere una lista válida de destinatarios"},
                     status=400,
                 )
-
+            
             try:
                 evento = models.Evento.objects.get(id=evento_id, usuario=request.user)
                 config_diseno = (
@@ -277,23 +275,24 @@ class InvitacionViewSet(viewsets.ModelViewSet):
                 )
             except models.Evento.DoesNotExist:
                 return Response(
-                    {"error": "Evento no encontrado o no autorizado"}, status=404
+                    {"error": "Evento no encontrado o no autorizado"},
+                    status=404,
                 )
-
+            
             resultados = {"exitosos": [], "fallidos": []}
-
+            
             for index, dest in enumerate(destinatarios):
                 try:
                     if not dest.get("nombre"):
                         raise ValueError("Nombre es requerido")
-
+                    
                     metodo_envio = dest.get("metodo_envio", metodo_envio_global)
-
+                    
                     if metodo_envio == "email" and not dest.get("email"):
                         raise ValueError("Email requerido para envío por correo")
                     elif metodo_envio == "whatsapp" and not dest.get("telefono"):
                         raise ValueError("Teléfono requerido para envío por WhatsApp")
-
+                    
                     invitacion = models.Invitacion.objects.create(
                         evento=evento,
                         destinatario_nombre=dest["nombre"],
@@ -305,9 +304,9 @@ class InvitacionViewSet(viewsets.ModelViewSet):
                         enlace_unico=str(uuid.uuid4()),
                         formato="png",  # valor requerido por el modelo; no usado
                     )
-
+                    
                     self._enviar_invitacion(invitacion)
-
+                    
                     resultados["exitosos"].append(
                         {
                             "indice": index,
@@ -316,7 +315,6 @@ class InvitacionViewSet(viewsets.ModelViewSet):
                             "enlace": self._link_confirmacion(invitacion),
                         }
                     )
-
                 except Exception as e:
                     resultados["fallidos"].append(
                         {
@@ -326,7 +324,7 @@ class InvitacionViewSet(viewsets.ModelViewSet):
                         }
                     )
                     continue
-
+            
             return Response(
                 {
                     "status": "completed",
@@ -336,14 +334,12 @@ class InvitacionViewSet(viewsets.ModelViewSet):
                     "detalles": resultados,
                 }
             )
-
         except Exception as e:
             logger.exception("Error interno en envío masivo")
             return Response(
                 {"error": "Error interno del servidor", "detail": str(e)},
                 status=500,
             )
-
 
 class ConfirmacionViewSet(viewsets.ModelViewSet):
     serializer_class = ConfirmacionSerializer
@@ -359,23 +355,23 @@ class ConfirmacionViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """
-        Confirma asistencia usando exclusivamente `enlace_unico` de la invitación.
+        Confirma asistencia usando exclusivamente enlace_unico de la invitación.
         """
         enlace_unico = request.data.get("enlace_unico")
         if not enlace_unico:
             return Response({"error": "Falta enlace_unico"}, status=400)
-
+        
         try:
             invitacion = models.Invitacion.objects.get(enlace_unico=enlace_unico)
         except models.Invitacion.DoesNotExist:
             return Response({"error": "Invitación no encontrada"}, status=404)
-
+        
         # Validar acompañantes
         try:
             acompanantes = int(request.data.get("acompanantes", 0))
         except (TypeError, ValueError):
             acompanantes = 0
-
+        
         if acompanantes > invitacion.max_acompanantes:
             return Response(
                 {
@@ -383,7 +379,7 @@ class ConfirmacionViewSet(viewsets.ModelViewSet):
                 },
                 status=400,
             )
-
+        
         # Datos de confirmación
         confirmacion_data = {
             "invitacion": invitacion.id,
@@ -394,25 +390,24 @@ class ConfirmacionViewSet(viewsets.ModelViewSet):
             "menu_opcion": request.data.get("menu_opcion", ""),
             "comentarios": request.data.get("comentarios", ""),
         }
-
+        
         serializer = self.get_serializer(
             data=confirmacion_data, context={"invitacion": invitacion}
         )
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-
+        
         # Actualizar estado de la invitación
         invitacion.estado = "confirmada"
         invitacion.save(update_fields=["estado"])
-
+        
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=201, headers=headers)
-
 
 class InvitacionPublicaView(APIView):
     """
     Devuelve los datos públicos de la invitación para el formulario,
-    buscando por `enlace_unico` (ruta: /invitaciones/publicas/<enlace_unico>/).
+    buscando por enlace_unico (ruta: /invitaciones/publicas/<enlace_unico>/).
     """
     permission_classes = [permissions.AllowAny]
 
@@ -424,28 +419,27 @@ class InvitacionPublicaView(APIView):
         except models.Invitacion.DoesNotExist:
             return Response({"error": "Invitación no encontrada"}, status=404)
 
-
 class ExportarConfirmacionesView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, evento_id):
         try:
             evento = models.Evento.objects.get(id=evento_id, usuario=request.user)
-
+            
             response = HttpResponse(content_type="text/csv")
             response[
                 "Content-Disposition"
             ] = f'attachment; filename="confirmaciones_{evento_id}.csv"'
-
+            
             writer = csv.writer(response)
             writer.writerow(
                 ["Nombre", "Acompañantes", "Menú", "Fecha Confirmación", "Comentarios"]
             )
-
+            
             confirmaciones = models.Confirmacion.objects.filter(
                 invitacion__evento=evento
             ).select_related("invitacion")
-
+            
             for c in confirmaciones:
                 writer.writerow(
                     [
@@ -456,7 +450,7 @@ class ExportarConfirmacionesView(APIView):
                         c.comentarios or "",
                     ]
                 )
-
+            
             return response
         except models.Evento.DoesNotExist:
             return Response(

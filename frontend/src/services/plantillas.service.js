@@ -19,26 +19,21 @@ export const getPlantillasTemporales = async () => {
 
 export const createPlantillaTemporal = async (data) => {
   try {
-    const processedElements = data.config_diseno.elementos.map(element => {
-      if (element.type === 'image' && element.content) {
-        if (element.content.startsWith('data:image')) {
-          const base64Data = element.content.split(',')[1];
-          return {
-            ...element,
-            content: base64Data
-          };
-        }
-        return element;
+    if (!data || !data.config_diseno || !Array.isArray(data.config_diseno.elements)) {
+      throw new Error("La plantilla o su configuración no están definidas");
+    }
+
+    const processedElements = data.config_diseno.elements.map(el => {
+      if (el.type === 'image' && el.content?.startsWith('data:image')) {
+        const base64Data = el.content.split(',')[1];
+        return { ...el, content: base64Data };
       }
-      return element;
+      return el;
     });
 
-    const payload = {
+    const payload = { 
       ...data,
-      config_diseno: {
-        ...data.config_diseno,
-        elementos: processedElements
-      }
+      config_diseno: { ...data.config_diseno, elements: processedElements }
     };
 
     const response = await api.post('plantillas/', payload);

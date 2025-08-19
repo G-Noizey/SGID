@@ -1,7 +1,14 @@
-# invitations/serializers.py
 from rest_framework import serializers
-from .models import Plantilla, Evento, Invitacion, Confirmacion
+from .models import Plantilla, Evento, Invitacion, Confirmacion, Asset
 import base64
+from django.core.files.base import ContentFile
+import uuid
+
+class AssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Asset
+        fields = ['id', 'file', 'mime_type', 'original_name', 'created_at']
+        read_only_fields = ['id', 'mime_type', 'original_name', 'created_at']
 
 class Base64ImageField(serializers.Field):
     def to_representation(self, value):
@@ -18,15 +25,15 @@ class Base64ImageField(serializers.Field):
             }
         return data
 
-
 class PlantillaSerializer(serializers.ModelSerializer):
     config_diseno = serializers.JSONField()
-    
+    assets = AssetSerializer(many=True, read_only=True)
+
     class Meta:
         model = Plantilla
         fields = '__all__'
-        read_only_fields = ('creado_por', 'es_publica', 'es_temporal', 'fecha_creacion')
-    
+        read_only_fields = ('creado_por', 'es_publica', 'es_temporal', 'fecha_creacion', 'assets')
+
     def create(self, validated_data):
         # Procesar elementos con imágenes
         config_diseno = validated_data.get('config_diseno', {})
@@ -58,22 +65,20 @@ class PlantillaSerializer(serializers.ModelSerializer):
             
         return super().create(validated_data)
 
-
 class EventoSerializer(serializers.ModelSerializer):
     config_diseno = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Evento
         fields = '__all__'
         read_only_fields = ('usuario', 'fecha_creacion', 'ultimo_guardado')
-    
+
     def get_config_diseno(self, obj):
         return obj.get_config_diseno()
-    
+
     def create(self, validated_data):
         validated_data['usuario'] = self.context['request'].user
         return super().create(validated_data)
-
 
 class InvitacionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -81,21 +86,18 @@ class InvitacionSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('enlace_unico', 'estado', 'fecha_envio')
 
-
-# ✅ Nuevo: Serializer resumido para evento dentro de confirmación
 class EventoSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Evento
         fields = ["id", "titulo", "fecha_evento", "ubicacion"]
 
-
 class ConfirmacionSerializer(serializers.ModelSerializer):
-    evento = EventoSimpleSerializer(source="invitacion.evento", read_only=True)  # 👈 evento desde invitacion
+    evento = EventoSimpleSerializer(source="invitacion.evento", read_only=True)
     total_asistentes = serializers.SerializerMethodField()
 
     class Meta:
         model = Confirmacion
-        fields = '__all__'  # incluye todos los campos de confirmación
+        fields = '__all__'
         read_only_fields = ('fecha_respuesta',)
 
     def get_total_asistentes(self, obj):

@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Button, CircularProgress } from '@mui/material';
+import { Box, Container, Typography, Button } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { getPlantillasTemporales, createPlantillaTemporal, updatePlantilla} from '../../services/plantillas.service';
+import { getPlantillasTemporales, createPlantillaTemporal, updatePlantilla } from '../../services/plantillas.service';
 import { createEvento } from '../../services/eventos.service';
-import EventForm from './components/EventForm';
-import Swal from 'sweetalert2';
-import TemplatePreview from './components/TemplatePreview';
-import CreateTemplateForm from './components/CreateTemplateForm';
+import { toast } from 'react-toastify';
+
+import StepHeader from './components/StepHeader';
+import TemplateSelection from './components/TemplateSelection';
+import TemplatePreviewSection from './components/TemplatePreviewSection';
+import EventFormSection from './components/EventFormSection';
+import SubmitEventSection from './components/SubmitEventSection';
+import TemplateDialog from './components/TemplateDialog';
 
 const CreateInvitation = () => {
   const { currentUser } = useAuth();
+  
   const [formData, setFormData] = useState({
     titulo: '',
     tipo: 'boda',
@@ -19,63 +24,41 @@ const CreateInvitation = () => {
     descripcion: '',
     plantilla: ''
   });
+  
   const [plantillas, setPlantillas] = useState({ results: [], count: 0 });
   const [loadingPlantillas, setLoadingPlantillas] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
-  const [showTemplateForm, setShowTemplateForm] = useState(false);
-  {
-    /********* EDITAR PLANTILLA *********/
-  }
-  const [isEditingTemplate, setIsEditingTemplate] = useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [templateTab, setTemplateTab] = useState(0);
+  const [templateToEdit, setTemplateToEdit] = useState(null);
 
-const handleTemplateUpdate = async (updatedTemplateData) => {
-  if (!selectedTemplate) return;
-  try {
-    setSubmitting(true);
-    await updatePlantilla(selectedTemplate.id, updatedTemplateData);
+  const eventTypes = [
+    { value: 'boda', label: 'Boda' },
+    { value: 'cumpleaños', label: 'Cumpleaños' },
+    { value: 'baby_shower', label: 'Baby Shower' },
+    { value: 'graduacion', label: 'Graduación' },
+    { value: 'otro', label: 'Otro' }
+  ];
 
-    // volver a pedir la lista
-    const refreshed = await getPlantillasTemporales();
-    setPlantillas(refreshed);
+  const steps = ['Seleccionar Plantilla', 'Datos del Evento', 'Confirmar Invitación'];
 
-    // buscar la que acabamos de editar
-    const refreshedTemplate = refreshed.results.find(p => p.id === selectedTemplate.id);
-
-    // mantener seleccionada esa
-    if (refreshedTemplate) {
-      setSelectedTemplate(refreshedTemplate);
-      setFormData((prev) => ({ ...prev, plantilla: refreshedTemplate.id }));
-    }
-
-    setIsEditingTemplate(false);
-    Swal.fire("Éxito", "Plantilla actualizada correctamente", "success");
-  } catch (error) {
-    console.error("Error updating template:", error);
-    Swal.fire("Error", "No se pudo actualizar la plantilla.", "error");
-  } finally {
-    setSubmitting(false);
-  }
-};
-  {
-    /********* EDITAR PLANTILLA *********/
-  }
+  const getCurrentStep = () => {
+    if (!selectedTemplate) return 0;
+    if (!formData.titulo || !formData.fecha_evento) return 1;
+    return 2;
+  };
 
   useEffect(() => {
     const loadPlantillas = async () => {
       if (!currentUser) return;
-      
       try {
         setLoadingPlantillas(true);
         const response = await getPlantillasTemporales();
-        setPlantillas(response); 
-        
+        setPlantillas(response);
         if (response?.results?.length > 0) {
           const firstTemplate = response.results[0];
-          setFormData(prev => ({ 
-            ...prev, 
-            plantilla: firstTemplate.id 
-          }));
+          setFormData(prev => ({ ...prev, plantilla: firstTemplate.id }));
           setSelectedTemplate(firstTemplate);
         }
       } catch (error) {
@@ -85,19 +68,24 @@ const handleTemplateUpdate = async (updatedTemplateData) => {
         setLoadingPlantillas(false);
       }
     };
-
     loadPlantillas();
   }, [currentUser]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Normalizar tipo de evento para que coincida con los choices del modelo
+    if (name === 'tipo') {
+      const normalized = value.replace(/-/g, '_'); 
+      setFormData(prev => ({ ...prev, [name]: normalized }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleTemplateChange = (e) => {
-    const selectedId = e.target.value;
+    const selectedId = Number(e.target.value);
     setFormData(prev => ({ ...prev, plantilla: selectedId }));
-    
     const template = plantillas.results?.find(t => t.id === selectedId);
     setSelectedTemplate(template);
   };
@@ -106,24 +94,43 @@ const handleTemplateUpdate = async (updatedTemplateData) => {
     try {
       setSubmitting(true);
       const createdTemplate = await createPlantillaTemporal(newTemplate);
-      
-      setPlantillas(prev => ({
-        ...prev,
-        count: prev.count + 1,
-        results: [...prev.results, createdTemplate]
+      setPlantillas(prev => ({ 
+        ...prev, 
+        count: prev.count + 1, 
+        results: [...prev.results, createdTemplate] 
       }));
-      
       setFormData(prev => ({ ...prev, plantilla: createdTemplate.id }));
       setSelectedTemplate(createdTemplate);
-      setShowTemplateForm(false);
-      
+      setTemplateTab(0);
+      toast.success("Plantilla creada correctamente 🎉");
     } catch (error) {
       console.error("Error creating template:", error);
-      Swal.fire({
-        title: 'Error',
-        text: 'No se pudo crear la plantilla. Por favor, inténtalo de nuevo.',
-        icon: 'error'
-      });
+      toast.error("Error al crear la plantilla ❌");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleTemplateUpdate = async (updatedTemplateData) => {
+    if (!templateToEdit) return;
+    try {
+      setSubmitting(true);
+      await updatePlantilla(templateToEdit.id, updatedTemplateData);
+      const refreshed = await getPlantillasTemporales();
+      setPlantillas(refreshed);
+      const refreshedTemplate = refreshed.results.find(p => p.id === templateToEdit.id);
+      if (refreshedTemplate) {
+        if (selectedTemplate?.id === templateToEdit.id) {
+          setSelectedTemplate(refreshedTemplate);
+          setFormData((prev) => ({ ...prev, plantilla: refreshedTemplate.id }));
+        }
+        setTemplateToEdit(null);
+      }
+      setTemplateTab(0);
+      toast.success("Plantilla actualizada correctamente 🎉");
+    } catch (error) {
+      console.error("Error updating template:", error);
+      toast.error("Error al actualizar la plantilla ❌");
     } finally {
       setSubmitting(false);
     }
@@ -131,141 +138,109 @@ const handleTemplateUpdate = async (updatedTemplateData) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!formData.plantilla) {
-      Swal.fire('Advertencia', 'Debes seleccionar una plantilla', 'warning');
+      console.warn('Debes seleccionar una plantilla');
       return;
     }
 
-    setSubmitting(true);
-    
-    try {
-      const fechaCompleta = new Date(formData.fecha_evento).toISOString();
-      
-      await createEvento({
-        ...formData,
-        fecha_evento: fechaCompleta
-      });
+    // Normalizar fecha: agregar segundos si no existen
+    let fecha = formData.fecha_evento;
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(fecha)) {
+      fecha += ':00';
+    }
 
-      Swal.fire({
-        title: 'Éxito',
-        text: 'Evento creado correctamente',
-        icon: 'success',
-        confirmButtonText: 'Aceptar'
-      });
-      
-      setFormData({
-        titulo: '',
-        tipo: 'boda',
-        fecha_evento: '',
-        ubicacion: '',
-        descripcion: '',
-        plantilla: formData.plantilla
-      });
+    const payload = { ...formData, fecha_evento: fecha };
+    console.log('Payload enviado al backend:', payload);
+
+    setSubmitting(true);
+    try {
+      await createEvento(payload);
+      toast.success("Evento creado correctamente 🎉");
+      setFormData({ titulo: '', tipo: 'boda', fecha_evento: '', ubicacion: '', descripcion: '', plantilla: formData.plantilla });
     } catch (error) {
       console.error("Error creating event:", error);
-      Swal.fire({
-        title: 'Error',
-        text: error.response?.data?.message || 'Ocurrió un error al crear el evento',
-        icon: 'error',
-        confirmButtonText: 'Entendido'
-      });
+      toast.error("Error al crear el evento ❌");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const openTemplateDialog = (tab = 0, template = null) => {
+    setTemplateTab(tab);
+    setTemplateToEdit(template);
+    setTemplateDialogOpen(true);
+  };
+
+  const closeTemplateDialog = () => {
+    setTemplateDialogOpen(false);
+    setTemplateToEdit(null);
+  };
+
   if (!currentUser) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
+      <Container maxWidth="md" sx={{ py: 4, textAlign: 'center' }}>
         <Typography variant="h6">Debes iniciar sesión para crear eventos</Typography>
-      </Box>
+      </Container>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Typography variant="h4" gutterBottom sx={{ mb: 3, color: 'primary.main' }}>
-          Crear Nueva Invitación
-        </Typography>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <Box sx={{ mb: 4, textAlign: 'center' }}>
+          <Typography variant="h3" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+            Crear Nueva Invitación
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            Crea tu evento paso a paso con nuestras plantillas personalizables
+          </Typography>
+        </Box>
 
-        <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
-          {showTemplateForm ? (
-            <CreateTemplateForm 
-              onSubmit={handleTemplateCreated} 
-              onCancel={() => setShowTemplateForm(false)}
+        <StepHeader steps={steps} activeStep={getCurrentStep()} />
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <TemplateSelection
+            plantillas={plantillas}
+            formData={formData}
+            selectedTemplate={selectedTemplate}
+            loadingPlantillas={loadingPlantillas}
+            onTemplateChange={handleTemplateChange}
+            onOpenDialog={openTemplateDialog}
+          />
+
+          <TemplatePreviewSection selectedTemplate={selectedTemplate} />
+
+          {selectedTemplate && (
+            <EventFormSection 
+              formData={formData} 
+              handleChange={handleChange} 
+              eventTypes={eventTypes} 
             />
-          ) : isEditingTemplate && selectedTemplate ? (
-            <CreateTemplateForm
-              onSubmit={handleTemplateUpdate}
-              onCancel={() => setIsEditingTemplate(false)}
-              initialData={selectedTemplate}
-            />
-          ) : (
-            <>
-              <EventForm
-                formData={formData}
-                handleChange={handleChange}
-                handleTemplateChange={handleTemplateChange}
-                plantillas={plantillas}
-                loadingPlantillas={loadingPlantillas}
-                selectedTemplate={selectedTemplate}
-              />
-              
-              <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-                <Button onClick={() => setShowTemplateForm(true)} variant="outlined">
-                  Crear Nueva Plantilla
-                </Button>
-                <Button onClick={() => setIsEditingTemplate(true)} variant="outlined" disabled={!selectedTemplate}>
-                  Editar Plantilla Seleccionada
-                </Button>
-              </Box>
-              
-              {selectedTemplate && (
-                <Box sx={{ mt: 4 }}>
-                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                    Vista Previa de la Plantilla
-                  </Typography>
-                  <TemplatePreview template={selectedTemplate} />
-                </Box>
-              )}
-            </>
           )}
 
-          {!showTemplateForm && !isEditingTemplate &&(
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
-              <Button
-                variant="contained"
-                size="large"
-                onClick={handleSubmit}
-                disabled={submitting || loadingPlantillas || !formData.plantilla}
-                sx={{
-                  px: 4,
-                  py: 1.5,
-                  fontSize: '1rem',
-                  backgroundColor: 'primary.main',
-                  '&:hover': { backgroundColor: 'primary.dark' }
-                }}
-              >
-                {submitting ? (
-                  <>
-                    <CircularProgress size={24} sx={{ color: 'white', mr: 1 }} />
-                    Creando...
-                  </>
-                ) : (
-                  'Crear Evento'
-                )}
-              </Button>
-            </Box>
+          {selectedTemplate && (
+            <SubmitEventSection
+              handleSubmit={handleSubmit}
+              submitting={submitting}
+              loadingPlantillas={loadingPlantillas}
+              formData={formData}
+            />
           )}
-        </Paper>
+        </Box>
       </motion.div>
-    </Box>
+
+      <TemplateDialog
+        open={templateDialogOpen}
+        tab={templateTab}
+        onTabChange={setTemplateTab}
+        onClose={closeTemplateDialog}
+        plantillas={plantillas}
+        formData={formData}
+        onTemplateChange={handleTemplateChange}
+        onSubmit={templateTab === 1 ? handleTemplateCreated : handleTemplateUpdate}
+        templateToEdit={templateToEdit}
+      />
+    </Container>
   );
 };
 
