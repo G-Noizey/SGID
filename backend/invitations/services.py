@@ -1,33 +1,42 @@
-# backend/invitations/services.py
-
-import os
-from django.conf import settings
-from django.core.mail import send_mail
-from twilio.rest import Client
+import logging
+from django.utils.html import strip_tags
 from django.core.mail import EmailMultiAlternatives
-from django.core.mail import EmailMessage
+from django.conf import settings
+from twilio.rest import Client
+
+logger = logging.getLogger(__name__)
 
 def enviar_correo(destinatario, asunto, mensaje_html):
-    """Envía un correo electrónico con formato HTML"""
-    email = EmailMessage(
-        subject=asunto,
-        body=mensaje_html,
-        from_email=settings.EMAIL_HOST_USER,
-        to=[destinatario],
-    )
-    email.content_subtype = "html"  # Especificar que el cuerpo es HTML
-    email.send()
-
+    """
+    Envía un correo electrónico sin adjuntos
+    """
+    try:
+        email = EmailMultiAlternatives(
+            subject=asunto,
+            body=strip_tags(mensaje_html),
+            from_email=settings.EMAIL_HOST_USER,
+            to=[destinatario]
+        )
+        
+        email.attach_alternative(mensaje_html, "text/html")
+        email.send()
+        logger.info(f"Correo enviado exitosamente a {destinatario}")
+        return True
+    except Exception as e:
+        logger.error(f"Error enviando correo a {destinatario}: {str(e)}")
+        return False
 
 def enviar_whatsapp(numero, mensaje):
-    print(f"[INFO] Enviando WhatsApp a {numero}")
     try:
+        logger.info(f"Intentando enviar WhatsApp a {numero}")
         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
         message = client.messages.create(
             body=mensaje,
             from_=settings.TWILIO_WHATSAPP_NUMBER,
             to=f"whatsapp:{numero}"
         )
-        print(f"[SUCCESS] WhatsApp enviado. SID: {message.sid}")
+        logger.info(f"WhatsApp enviado exitosamente. SID: {message.sid}")
+        return True
     except Exception as e:
-        print(f"[ERROR] Error al enviar WhatsApp: {e}")
+        logger.error(f"Error enviando WhatsApp: {str(e)}")
+        return False

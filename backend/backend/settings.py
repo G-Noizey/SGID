@@ -135,6 +135,9 @@ if not DEBUG:
         "https://www.tudominio.com",
     ]
 
+    # Permite el envío de cookies
+CORS_ALLOW_CREDENTIALS = True
+
 # link al frontend (React)
 FRONTEND_URL = "http://localhost:5173" 
 

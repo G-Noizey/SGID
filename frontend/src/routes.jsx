@@ -11,6 +11,8 @@ import DashboardLayout from './layout/dashboard';
 import Event from './pages/Home/Event';
 import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/Auth/ResetPasswordPage';
+// Importa los nuevos componentes
+import ConfirmacionPage from './pages/Home/ConfirmacionPage';
 
 const router = createBrowserRouter([
   {
@@ -20,7 +22,13 @@ const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
-      { path: 'reset-password/:uid/:token', element: <ResetPasswordPage /> }
+      { path: 'reset-password/:uid/:token', element: <ResetPasswordPage /> },
+      // Nuevas rutas públicas para confirmación
+      { 
+        path: 'confirmar/:enlace_unico', 
+        element: <ConfirmacionPage /> 
+      }
+    
     ]
   },
   {
@@ -42,6 +50,5 @@ const router = createBrowserRouter([
     ]
   }
 ]);
-
 
 export default router;

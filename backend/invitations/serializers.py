@@ -1,9 +1,7 @@
-#invitations/serializers.py
+# invitations/serializers.py
 from rest_framework import serializers
 from .models import Plantilla, Evento, Invitacion, Confirmacion
 import base64
-from django.core.files.base import ContentFile
-import json
 
 class Base64ImageField(serializers.Field):
     def to_representation(self, value):
@@ -19,6 +17,7 @@ class Base64ImageField(serializers.Field):
                 'extension': ext
             }
         return data
+
 
 class PlantillaSerializer(serializers.ModelSerializer):
     config_diseno = serializers.JSONField()
@@ -59,6 +58,7 @@ class PlantillaSerializer(serializers.ModelSerializer):
             
         return super().create(validated_data)
 
+
 class EventoSerializer(serializers.ModelSerializer):
     config_diseno = serializers.SerializerMethodField()
     
@@ -74,21 +74,36 @@ class EventoSerializer(serializers.ModelSerializer):
         validated_data['usuario'] = self.context['request'].user
         return super().create(validated_data)
 
+
 class InvitacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Invitacion
         fields = '__all__'
         read_only_fields = ('enlace_unico', 'estado', 'fecha_envio')
 
+
+# ✅ Nuevo: Serializer resumido para evento dentro de confirmación
+class EventoSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Evento
+        fields = ["id", "titulo", "fecha_evento", "ubicacion"]
+
+
 class ConfirmacionSerializer(serializers.ModelSerializer):
+    evento = EventoSimpleSerializer(source="invitacion.evento", read_only=True)  # 👈 evento desde invitacion
+    total_asistentes = serializers.SerializerMethodField()
+
     class Meta:
         model = Confirmacion
-        fields = '__all__'
+        fields = '__all__'  # incluye todos los campos de confirmación
         read_only_fields = ('fecha_respuesta',)
-    
+
+    def get_total_asistentes(self, obj):
+        return 1 + (obj.acompanantes or 0)
+
     def validate_acompanantes(self, value):
-        invitacion = self.context['invitacion']
-        if value > invitacion.max_acompanantes:
+        invitacion = self.context.get('invitacion')
+        if invitacion and value > invitacion.max_acompanantes:
             raise serializers.ValidationError(
                 f'Máximo de acompañantes permitidos: {invitacion.max_acompanantes}'
             )

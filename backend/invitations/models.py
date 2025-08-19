@@ -70,6 +70,7 @@ class Invitacion(models.Model):
     )
     
     evento = models.ForeignKey(Evento, on_delete=models.CASCADE, related_name='invitaciones')
+    config_diseno = models.JSONField(null=True, blank=True)  # Añade este campo
     estado = models.CharField(max_length=50, choices=ESTADOS, default='pendiente')
     fecha_envio = models.DateTimeField(null=True, blank=True)
     enlace_unico = models.CharField(max_length=255, unique=True, default=uuid.uuid4)
