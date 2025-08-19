@@ -24,7 +24,9 @@ class RegisterView(generics.CreateAPIView):
             'message': 'Usuario registrado exitosamente'
         }, status=status.HTTP_201_CREATED)
 
+from .serializers import CustomTokenObtainPairSerializer
 class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

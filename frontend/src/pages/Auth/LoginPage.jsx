@@ -17,18 +17,28 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      const success = await login(credentials);
-      if (success) {
-        toast.success('¡Bienvenido!');
-        // Redirección segura con timeout para que se vea el toast
-        setTimeout(() => navigate('/app'), 1500);
-      }
-    } catch (error) {
-      toast.error('Credenciales incorrectas');
-    } finally {
-      setLoading(false);
+    const success = await login(credentials);
+    if (success) {
+      toast.success('¡Bienvenido!');
+
+      // obtener rol del usuario actual desde AuthContext
+      const user = JSON.parse(localStorage.getItem('user')); // o desde currentUser
+      const rol = user?.rol;
+
+      setTimeout(() => {
+        if (rol === 'admin') {
+          navigate('/admin'); // 🔹 admin va a HomeAdmin
+        } else {
+          navigate('/app'); // 🔹 cliente va al flujo normal
+        }
+      }, 1500);
     }
-  };
+  } catch (error) {
+    toast.error('Credenciales incorrectas');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <Container fluid className="login-container">

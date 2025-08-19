@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import TemplatePreview from './components/TemplatePreview';
 import CreateTemplateForm from './components/CreateTemplateForm';
 
-const CreateInvitation = () => {
+const CreateInvitationAdmin = () => {
   const { currentUser } = useAuth();
   const [formData, setFormData] = useState({
     titulo: '',
@@ -269,4 +269,4 @@ const handleTemplateUpdate = async (updatedTemplateData) => {
   );
 };
 
-export default CreateInvitation;
+export default CreateInvitationAdmin;

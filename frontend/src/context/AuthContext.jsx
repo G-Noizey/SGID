@@ -78,7 +78,7 @@ export function AuthProvider({ children }) {
       
       const decoded = parseJwt(access);
       setCurrentUser(decoded);
-      api.defaults.headers.common['Authorization'] = `Bearer ${access}`;
+      localStorage.setItem('user', JSON.stringify(decoded)); // guardamos user con rol
       
       return true;
     } catch (error) {

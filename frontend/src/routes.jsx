@@ -13,6 +13,9 @@ import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/Auth/ResetPasswordPage';
 // Importa los nuevos componentes
 import ConfirmacionPage from './pages/Home/ConfirmacionPage';
+import DashboardLayoutAdmin from './layout/dashboardAdmin';
+import HomeAdmin from './pages/Home/HomeAdmin';
+import CreateInvitationAdmin from './pages/Home/CreateInvitationAdmin';
 
 const router = createBrowserRouter([
   {
@@ -44,6 +47,21 @@ const router = createBrowserRouter([
           { path: 'create-invitation', element: <CreateInvitation /> },
           { path: 'send-invitation', element: <SendInvitation /> },
           { path: 'event', element: <Event /> },
+          { path: 'setting', element: <Setting /> },
+        ]
+      }
+    ]
+  },
+   {
+    path: '/admin',
+    element: <ProtectedRoute />,
+    children: [
+      {
+        path: '',
+        element: <DashboardLayoutAdmin />,
+        children: [
+          { index: true, element: <HomeAdmin /> },
+          { path: 'create-invitation', element: <CreateInvitationAdmin /> },
           { path: 'setting', element: <Setting /> },
         ]
       }

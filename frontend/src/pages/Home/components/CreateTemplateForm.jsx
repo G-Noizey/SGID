@@ -195,13 +195,31 @@ const CreateTemplateForm = ({ onSubmit, onCancel, initialData }) => {
   const [editingElementId, setEditingElementId] = useState(null);
 
   useEffect(() => {
-    if (initialData) {
-      setTemplateName(initialData.nombre || '');
-      setElements(initialData.config_diseno?.elementos || []);
-      setColors(initialData.config_diseno?.colores || defaultColors);
-      setFonts(initialData.config_diseno?.fuentes || defaultFonts);
-    }
-  }, [initialData]);
+  if (initialData) {
+    setTemplateName(initialData.nombre || '');
+
+    const restoredElements = (initialData.config_diseno?.elementos || []).map(el => {
+      if (el.type === "image" && el.content) {
+        if (typeof el.content === "string") {
+          // Si ya viene con dataURL, lo dejamos
+          if (el.content.startsWith("data:image")) {
+            return el;
+          }
+          // Si solo viene el base64 pelón, le ponemos prefijo
+          return { ...el, content: `data:image/png;base64,${el.content}`};
+        } else {
+          // Si por error viene como objeto, lo ignoramos o lo vaciamos
+          return { ...el, content: "" };
+        }
+      }
+      return el;
+    });
+
+    setElements(restoredElements);
+    setColors(initialData.config_diseno?.colores || defaultColors);
+    setFonts(initialData.config_diseno?.fuentes || defaultFonts);
+  }
+}, [initialData]);
 
   const defaultColors = {
   primary: '#4a2c82',
