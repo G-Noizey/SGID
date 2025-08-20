@@ -62,7 +62,9 @@ class PlantillaSerializer(serializers.ModelSerializer):
         if user.rol == 'cliente':
             validated_data['es_temporal'] = True
             validated_data['es_publica'] = False
-            
+        else:
+            validated_data['es_temporal'] = False
+            validated_data['es_publica'] = True
         return super().create(validated_data)
 
 class EventoSerializer(serializers.ModelSerializer):

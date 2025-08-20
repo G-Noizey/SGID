@@ -1,68 +1,100 @@
-import {
-  Box,
-  Typography,
-  Grid,
-  Paper,
-  Button, CssBaseline,
-} from "@mui/material";
-import EventAvailableIcon from "@mui/icons-material/EventAvailable";
-import EventIcon from '@mui/icons-material/Event';
-import DesignServicesIcon from "@mui/icons-material/DesignServices";
-import WhatsAppIcon from "@mui/icons-material/WhatsApp";
-import EmailIcon from "@mui/icons-material/Email";
-import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import { Box, Container, Typography, Grid, Card, CardContent, Button, useTheme } from "@mui/material";
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
+import AddIcon from "@mui/icons-material/Add";
+import EventIcon from "@mui/icons-material/Event";
 import { useNavigate } from "react-router-dom";
 
 const HomeAdmin = () => {
   const navigate = useNavigate();
+
+  const theme = useTheme();
+
+    const brand = useMemo(() => {
+        if (typeof window !== "undefined") {
+            const css = getComputedStyle(document.documentElement);
+            return {
+                primary:
+                    css.getPropertyValue("--beige-primary").trim() ||
+                    theme.palette.primary.main,
+                dark:
+                    css.getPropertyValue("--beige-dark").trim() ||
+                    theme.palette.text.primary,
+                lightBg:
+                    css.getPropertyValue("--beige-light").trim() ||
+                    theme.palette.background.default,
+            };
+        }
+        return {
+            primary: theme.palette.primary.main,
+            dark: theme.palette.text.primary,
+            lightBg: theme.palette.background.default,
+        };
+    }, [theme]);
+
   return (
-    <Box sx={{ display: "flex",  padding: 3, backgroundColor: "var(--beige-light)", flexDirection: "column",  minHeight: "100vh", }}>
-     <CssBaseline />
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0, transition: { duration: 0.8 } }}
-        exit={{ opacity: 0, y: -50, transition: { duration: 0.8 } }}
-      >
-        <Typography
-          variant="h4"
-          gutterBottom
-          sx={{ color: "var(--beige-dark)" }}
+    <Box
+            sx={{
+              margin: 0 ,
+              padding: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                background: `radial-gradient(1200px 600px at 10% -10%, ${brand.primary}26, transparent),
+                       radial-gradient(700px 400px at 90% 10%, #8a7cff22, transparent),
+                       linear-gradient(180deg, ${brand.lightBg}, #f8f8fb)`,
+        
+                          }}
         >
-          Bienvenido al Panel SGID
-        </Typography>
-        <Typography variant="body1" sx={{ mb: 4 }}>
-          Gestiona todas tus plantillas de forma rápida y eficiente.
-        </Typography>
-
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6} lg={4}>
-            <Paper sx={{ p: 3, borderRadius: 4 }} elevation={3}>
-              <EventIcon sx={{ fontSize: 40, color: "var(--beige-primary)" }} />
-              <Typography variant="h6" sx={{ mt: 2 }}>
-               Crear invitación
-              </Typography>
-              <Button variant="outlined" sx={{ mt: 2 }} onClick={() => navigate("/admin/create-invitation")}>
-                Crear
-              </Button>
-            </Paper>
-          </Grid>
-
-          {/* <Grid item xs={12} md={6} lg={4}>
-            <Paper sx={{ p: 3, borderRadius: 4 }} elevation={3}>
-              <DesignServicesIcon sx={{ fontSize: 40, color: "var(--beige-primary)" }} />
-              <Typography variant="h6" sx={{ mt: 2 }}>
-                Plantillas de Invitaciones
-              </Typography>
-              <Button variant="outlined" sx={{ mt: 2 }}>
-                Personalizar
-              </Button>
-            </Paper>
-          </Grid> */}
-
-         
-        </Grid>
+      {/* Encabezado con animación */}
+      <motion.div initial={{ opacity: 0, y: -30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+        <Box sx={{ textAlign: "center", mb: 6, p: 2 }}>
+         <Typography variant="h3" sx={{ fontWeight: 900, color: brand.dark }}>
+                     Bienvenido a{" "}
+                     <Box component="span" sx={{ color: brand.primary }}>
+                       SGID
+                     </Box>
+                   </Typography>
+          <Typography variant="h6" color="text.secondary" sx={{ mt: 1, opacity: 0.85 }}>
+            Administra tus plantillas digitales de forma rápida, elegante y profesional.
+          </Typography>
+        </Box>
       </motion.div>
+
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={12} sx={{justifyContent: "center", display: "flex", alignContent: "center"}}>
+          <motion.div whileHover={{ scale: 1.05 }}>
+            <Card sx={{ borderRadius: "20px", boxShadow: 4, textAlign: "center", p: 2 }}>
+              <CardContent>
+                <EventIcon sx={{ fontSize: 50, color: "#655a50", mb: 2 }} />
+                <Typography variant="h6" gutterBottom>Plantillas</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Crea y gestiona invitaciones predifinidas como para bodas, cumpleaños, graduaciones y más.
+                </Typography>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </Grid>
+
+      </Grid>
+
+      
+      <Box sx={{ textAlign: "center", mt: 6 }}>
+        <motion.div whileHover={{ scale: 1.05 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
+            startIcon={<AddIcon />}
+            sx={{ borderRadius: "30px", px: 4, py: 1.5, fontSize: "1.1rem" }}
+            onClick={() => navigate("/admin/create-invitation")}
+          >
+            Crear Plantillas Predefinidas
+          </Button>
+        </motion.div>
+      </Box>
     </Box>
   );
 };

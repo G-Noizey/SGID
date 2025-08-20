@@ -61,7 +61,6 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <HomeAdmin /> },
           { path: 'create-invitation', element: <CreateInvitationAdmin /> },
-    
         ]
       }
     ]
