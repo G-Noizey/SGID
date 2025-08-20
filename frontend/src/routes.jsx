@@ -5,7 +5,6 @@ import HomePage from './pages/Home/HomePage';
 import Confirmation from './pages/Home/confirmation';
 import CreateInvitation from './pages/Home/CreateInvitation';
 import SendInvitation from './pages/Home/SendInvitations';
-import Setting from './pages/Home/Setting';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './layout/dashboard';
 import Event from './pages/Home/Event';
@@ -47,7 +46,7 @@ const router = createBrowserRouter([
           { path: 'create-invitation', element: <CreateInvitation /> },
           { path: 'send-invitation', element: <SendInvitation /> },
           { path: 'event', element: <Event /> },
-          { path: 'setting', element: <Setting /> },
+        
         ]
       }
     ]
@@ -62,7 +61,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <HomeAdmin /> },
           { path: 'create-invitation', element: <CreateInvitationAdmin /> },
-          { path: 'setting', element: <Setting /> },
+    
         ]
       }
     ]

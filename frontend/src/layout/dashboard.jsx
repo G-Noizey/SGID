@@ -7,7 +7,6 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import AddIcon from "@mui/icons-material/Add";
 import SendIcon from "@mui/icons-material/Send";
-import SettingsIcon from "@mui/icons-material/Settings";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -62,12 +61,6 @@ const DashboardLayout = () => {
                         <SendIcon sx={{ color: "var(--beige-dark)" }} />
                     </ListItemIcon>
                     <ListItemText  primary="Enviar Invitaciones" />
-                </ListItem>
-                <ListItem button  onClick={() => navigate("/app/setting")} style={{ cursor: "pointer" }}>
-                    <ListItemIcon>
-                        <SettingsIcon sx={{ color: "var(--beige-dark)" }} />
-                    </ListItemIcon>
-                    <ListItemText  primary="Configuración" />
                 </ListItem>
                 <Divider sx={{ my: 1 }} />
                 <ListItem

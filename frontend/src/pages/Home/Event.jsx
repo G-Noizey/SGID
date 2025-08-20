@@ -1,499 +1,237 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
-  Box, Typography, Paper, Grid, IconButton, Menu, MenuItem, CircularProgress,
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, useMediaQuery
-} from '@mui/material';
-import PreviewIcon from '@mui/icons-material/Preview';
-import CloseIcon from '@mui/icons-material/Close';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import ImageIcon from '@mui/icons-material/Image';
-import { useTheme } from '@mui/material/styles';
-import { getEventos } from '../../services/eventos.service';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+  Box,
+  Typography,
+  Grid,
+  Button,
+  CircularProgress,
+  Paper,
+  useTheme,
+  useMediaQuery,
+} from "@mui/material";
+import { Stage, Layer, Text, Image as KonvaImage, Rect, Circle, Line } from "react-konva";
+import { getEventos } from "../../services/eventos.service";
+import ImageIcon from "@mui/icons-material/Image";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import jsPDF from "jspdf";
 
 const Event = () => {
   const [eventos, setEventos] = useState([]);
-  const [selectedEvento, setSelectedEvento] = useState(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [loading, setLoading] = useState({
-    PDF: false,
-    PNG: false
-  });
-  const [imageErrors, setImageErrors] = useState({});
-  
+  const [elementsMap, setElementsMap] = useState({});
+  const [loading, setLoading] = useState({});
+  const stageRefs = useRef({});
+
   const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
-  const previewRef = useRef(null);
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const handleOpenPreview = (evento) => {
-    setSelectedEvento(evento);
-    setPreviewOpen(true);
-  };
-
-  const handleClosePreview = () => {
-    setPreviewOpen(false);
-    setImageErrors({});
-  };
-
-  const handleImageError = (index) => {
-    setImageErrors(prev => ({ ...prev, [index]: true }));
-  };
-
-  // Función para generar y descargar PNG
-  const handleDownloadPNG = async () => {
-    if (!previewRef.current || !selectedEvento) return;
-    
-    setLoading(prev => ({ ...prev, PNG: true }));
-    
-    try {
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: selectedEvento.config_diseno?.colores?.secondary || '#ffffff',
-        logging: false,
-      });
-      
-      const image = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.href = image;
-      link.download = `invitacion_${selectedEvento.titulo.replace(/\s+/g, '_')}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error('Error al generar PNG:', error);
-    } finally {
-      setLoading(prev => ({ ...prev, PNG: false }));
-    }
-  };
-
-  // Función para generar y descargar PDF
-  const handleDownloadPDF = async () => {
-    if (!previewRef.current || !selectedEvento) return;
-    
-    setLoading(prev => ({ ...prev, PDF: true }));
-    
-    try {
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: selectedEvento.config_diseno?.colores?.secondary || '#ffffff',
-        logging: false,
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`invitacion_${selectedEvento.titulo.replace(/\s+/g, '_')}.pdf`);
-    } catch (error) {
-      console.error('Error al generar PDF:', error);
-    } finally {
-      setLoading(prev => ({ ...prev, PDF: false }));
-    }
-  };
-
+  // Fetch events
   useEffect(() => {
     const fetchEventos = async () => {
       try {
         const response = await getEventos();
         setEventos(response.data.results);
+
+        // Inicializar loading por evento
+        const initialLoading = {};
+        response.data.results.forEach((ev) => {
+          initialLoading[ev.id] = { PNG: false, PDF: false };
+        });
+        setLoading(initialLoading);
       } catch (error) {
-        console.error('Error fetching eventos:', error);
+        console.error("Error fetching eventos:", error);
       }
     };
-
     fetchEventos();
   }, []);
 
-  // Componente de Preview
-  const EventPreview = () => {
-    if (!selectedEvento) return null;
-    
-    const { config_diseno } = selectedEvento;
-    const colores = config_diseno?.colores || {};
-    const fuentes = config_diseno?.fuentes || {};
-    const elementos = config_diseno?.elementos || [];
+  // Cargar imágenes para cada evento
+  useEffect(() => {
+    eventos.forEach((ev) => {
+      if (ev?.config_diseno?.elements) {
+        const loadElements = async () => {
+          const elementsWithImages = await Promise.all(
+            ev.config_diseno.elements.map(async (el) => {
+              if (el.type === "image" && el.src) {
+                return new Promise((resolve) => {
+                  const img = new window.Image();
+                  img.src = el.src;
+                  img.crossOrigin = "Anonymous";
+                  img.onload = () => resolve({ ...el, imageObject: img });
+                  img.onerror = () => resolve(el);
+                });
+              }
+              return el;
+            })
+          );
+          setElementsMap((prev) => ({ ...prev, [ev.id]: elementsWithImages }));
+        };
+        loadElements();
+      }
+    });
+  }, [eventos]);
 
-    return (
-      <Dialog
-        fullScreen={fullScreen}
-        open={previewOpen}
-        onClose={handleClosePreview}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          backgroundColor: colores.primary || theme.palette.primary.main,
-          color: '#fff',
-        }}>
-          Vista Previa: {selectedEvento.titulo}
-          <IconButton
-            edge="end"
-            color="inherit"
-            onClick={handleClosePreview}
-            aria-label="close"
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        
-        <DialogContent dividers sx={{ backgroundColor: '#f5f5f5' }}>
-          {/* Contenedor que será capturado para exportación */}
-          <div ref={previewRef}>
-            <Paper
-              elevation={0}
-              sx={{
-                p: 4,
-                minHeight: '70vh',
-                backgroundColor: colores.secondary || '#ffffff',
-                borderRadius: 3,
-                border: '1px solid #e0e0e0',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 3
-              }}
-            >
-              {/* Título principal */}
-              <Typography
-                variant="h2"
-                sx={{
-                  color: colores.primary || theme.palette.primary.main,
-                  fontFamily: fuentes.titulo || 'inherit',
-                  textAlign: 'center',
-                  fontWeight: 'bold',
-                  textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
-                }}
-              >
-                {selectedEvento.titulo}
-              </Typography>
-              
-              {/* Elementos de diseño */}
-              {elementos.map((elemento, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    textAlign: elemento.type === 'header' ? 'center' : 'left',
-                    my: 2,
-                    color: colores.text || '#000000',
-                    fontFamily: elemento.type === 'header' 
-                      ? fuentes.titulo 
-                      : fuentes.cuerpo || 'inherit'
-                  }}
-                >
-                  {elemento.type === 'image' && elemento.content ? (
-                    imageErrors[index] ? (
-                      <Box sx={{
-                        height: 200,
-                        bgcolor: '#f0f0f0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '1px dashed #ccc',
-                        borderRadius: 1
-                      }}>
-                        <Typography variant="body2" color="textSecondary">
-                          Error al cargar la imagen
-                        </Typography>
-                      </Box>
-                    ) : (
-                      <Box sx={{ textAlign: 'center', my: 2 }}>
-                        <img
-                          src={`data:image/jpeg;base64,${elemento.content}`}
-                          alt={`Elemento visual ${index}`}
-                          onError={() => handleImageError(index)}
-                          style={{
-                            maxWidth: '100%',
-                            maxHeight: '300px',
-                            objectFit: 'contain',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-                          }}
-                        />
-                      </Box>
-                    )
-                  ) : (
-                    <Typography
-                      variant={elemento.type === 'header' ? 'h3' : 'body1'}
-                      sx={{
-                        fontFamily: elemento.type === 'header' 
-                          ? fuentes.titulo 
-                          : fuentes.cuerpo || 'inherit',
-                        color: colores.text || '#000000',
-                        lineHeight: 1.6
-                      }}
-                    >
-                      {elemento.content}
-                    </Typography>
-                  )}
-                </Box>
-              ))}
-              
-              {/* Información del evento */}
-              <Box sx={{ 
-                mt: 'auto', 
-                pt: 3, 
-                borderTop: '1px solid #eeeeee',
-                backgroundColor: colores.background || 'transparent',
-                borderRadius: 2,
-                p: 3,
-                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-              }}>
-                <Typography variant="h5" sx={{ 
-                  color: colores.primary || theme.palette.primary.main,
-                  fontFamily: fuentes.titulo || 'inherit',
-                  mb: 2
-                }}>
-                  Detalles del Evento
-                </Typography>
-                
-                <Typography variant="body1" sx={{ mb: 2, fontStyle: 'italic' }}>
-                  {selectedEvento.descripcion}
-                </Typography>
-                
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold', mr: 1 }}>
-                        Fecha:
-                      </Typography>
-                      <Typography variant="body1">
-                        {new Date(selectedEvento.fecha_evento).toLocaleDateString('es-ES', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold', mr: 1 }}>
-                        Hora:
-                      </Typography>
-                      <Typography variant="body1">
-                        {new Date(selectedEvento.fecha_evento).toLocaleTimeString('es-ES', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold', mr: 1 }}>
-                        Ubicación:
-                      </Typography>
-                      <Typography variant="body1">
-                        {selectedEvento.ubicacion}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </Box>
-            </Paper>
-          </div>
-        </DialogContent>
-        
-        <DialogActions sx={{ justifyContent: 'center', py: 2, backgroundColor: '#f5f5f5' }}>
-          <Button 
-            variant="outlined" 
-            onClick={handleClosePreview}
-            sx={{ mr: 2, minWidth: 120 }}
-          >
-            Cerrar
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={loading.PNG ? <CircularProgress size={20} /> : <ImageIcon />}
-            onClick={handleDownloadPNG}
-            disabled={loading.PNG || loading.PDF}
-            sx={{ mr: 2, minWidth: 180 }}
-          >
-            {loading.PNG ? 'Generando PNG...' : 'Descargar PNG'}
-          </Button>
-          <Button
-            variant="contained"
-            color="secondary"
-            startIcon={loading.PDF ? <CircularProgress size={20} /> : <PictureAsPdfIcon />}
-            onClick={handleDownloadPDF}
-            disabled={loading.PDF || loading.PNG}
-            sx={{ minWidth: 180 }}
-          >
-            {loading.PDF ? 'Generando PDF...' : 'Descargar PDF'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    );
+  const renderElement = (element) => {
+    switch (element.type) {
+      case "text":
+        return <Text key={element.id} {...element} />;
+      case "image":
+        return element.imageObject ? (
+          <KonvaImage
+            key={element.id}
+            x={element.x}
+            y={element.y}
+            width={element.width}
+            height={element.height}
+            image={element.imageObject}
+          />
+        ) : null;
+      case "rect":
+        return <Rect key={element.id} {...element} />;
+      case "circle":
+        return <Circle key={element.id} {...element} />;
+      case "line":
+        return <Line key={element.id} {...element} />;
+      default:
+        return null;
+    }
   };
+
+  const handleDownloadPNG = (ev) => {
+    const stage = stageRefs.current[ev.id];
+    if (!stage) return;
+    setLoading((prev) => ({ ...prev, [ev.id]: { ...prev[ev.id], PNG: true } }));
+    try {
+      const uri = stage.toDataURL({ pixelRatio: 2 });
+      const link = document.createElement("a");
+      link.download = `invitacion_${ev.titulo.replace(/\s+/g, "_")}.png`;
+      link.href = uri;
+      link.click();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading((prev) => ({ ...prev, [ev.id]: { ...prev[ev.id], PNG: false } }));
+    }
+  };
+
+  const handleDownloadPDF = (ev) => {
+    const stage = stageRefs.current[ev.id];
+    if (!stage) return;
+    setLoading((prev) => ({ ...prev, [ev.id]: { ...prev[ev.id], PDF: true } }));
+    try {
+      const uri = stage.toDataURL({ pixelRatio: 2 });
+      const { width = 1200, height = 800 } = ev.config_diseno || {};
+      const pdf = new jsPDF({
+        orientation: width > height ? "landscape" : "portrait",
+        unit: "px",
+        format: [width, height],
+      });
+      pdf.addImage(uri, "PNG", 0, 0, width, height);
+      pdf.save(`invitacion_${ev.titulo.replace(/\s+/g, "_")}.pdf`);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading((prev) => ({ ...prev, [ev.id]: { ...prev[ev.id], PDF: false } }));
+    }
+  };
+
+  const getScale = (containerWidth, width) => Math.min(containerWidth / width, 0.7);
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main', mb: 3 }}>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold", textAlign: "center" }}>
         Eventos
       </Typography>
 
       {eventos.length === 0 ? (
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '50vh' 
-        }}>
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 6 }}>
           <CircularProgress size={60} />
         </Box>
       ) : (
-        <Grid container spacing={{ xs: 2, md: 3 }} columns={{ xs: 4, sm: 8, md: 12 }}>
-          {eventos.map((evento) => (
-            <Grid item xs={12} sm={6} md={4} key={evento.id}>
-              <Paper
-                sx={{
-                  p: 2,
-                  borderRadius: 3,
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  backgroundColor: evento.config_diseno?.colores?.secondary || '#f5f5f5',
-                  position: 'relative',
-                  transition: 'transform 0.3s, box-shadow 0.3s',
-                  '&:hover': {
-                    transform: 'translateY(-5px)',
-                    boxShadow: 6
-                  }
-                }}
-                elevation={4}
-              >
-                {/* Contenido del evento */}
-                <Box>
-                  <Typography
-                    variant="h5"
-                    gutterBottom
-                    sx={{
-                      color: evento.config_diseno?.colores?.primary || '#1976d2',
-                      fontFamily: evento.config_diseno?.fuentes?.titulo || 'inherit',
-                      fontWeight: 'bold',
-                      pr: 4,
-                      minHeight: '3em'
-                    }}
-                  >
-                    {evento.titulo}
-                  </Typography>
-                  <Typography
-                    variant="subtitle1"
-                    gutterBottom
-                    sx={{ 
-                      color: evento.config_diseno?.colores?.text || '#333',
-                      minHeight: '4em',
-                      mb: 2
-                    }}
-                  >
-                    {evento.descripcion}
-                  </Typography>
-                  
-                  <Box sx={{ 
-                    backgroundColor: 'rgba(0,0,0,0.05)', 
-                    p: 1, 
-                    borderRadius: 1,
-                    mb: 2
-                  }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>
-                        Fecha:
-                      </Typography>
-                      <Typography variant="body2">
-                        {new Date(evento.fecha_evento).toLocaleDateString('es-ES')}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>
-                        Hora:
-                      </Typography>
-                      <Typography variant="body2">
-                        {new Date(evento.fecha_evento).toLocaleTimeString('es-ES', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>
-                        Ubicación:
-                      </Typography>
-                      <Typography variant="body2">
-                        {evento.ubicacion}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
+        <Grid container spacing={4} justifyContent="center">
+          {eventos.map((ev) => {
+            const elements = elementsMap[ev.id] || [];
+            const { width = 1200, height = 800 } = ev.config_diseno || {};
+            const containerWidth = isSmallScreen ? window.innerWidth - 40 : 800;
+            const scale = getScale(containerWidth, width);
+            const stageWidth = width * scale;
+            const stageHeight = height * scale;
 
-                {/* Elementos de diseño */}
-                <Box sx={{ mt: 2, overflow: 'hidden' }}>
-                  {evento.config_diseno?.elementos?.slice(0, 2).map((elemento, index) => (
-                    <Box
-                      key={index}
+            return (
+              <Grid item xs={12} key={ev.id}>
+                <Paper
+                  sx={{
+                    p: 3,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    bgcolor: "#fff",
+                  }}
+                  elevation={7}
+                >
+                  <Box sx={{ mb: 2, textAlign: "center" }}>
+                    <Typography variant="h6">{ev.titulo}</Typography>
+                    <Typography variant="body2">{ev.tipo}</Typography>
+                    <Typography variant="body2">{new Date(ev.fecha_evento).toLocaleDateString()}</Typography>
+                    <Typography variant="body2">{ev.ubicacion}</Typography>
+                    <Typography variant="body2">{ev.descripcion}</Typography>
+                  </Box>
+
+                  <Box sx={{ overflow: "auto", textAlign: "center" }}>
+                    <Stage
+                      ref={(ref) => (stageRefs.current[ev.id] = ref)}
+                      width={stageWidth}
+                      height={stageHeight}
+                      scaleX={scale}
+                      scaleY={scale}
+                      style={{ border: "1px solid #ccc", backgroundColor: "#fff" }}
+                    >
+                      <Layer>{elements.map((el) => renderElement(el))}</Layer>
+                    </Stage>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      mt: 2,
+                      display: "flex",
+                      gap: 2,
+                      flexWrap: "wrap",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Button
+                      variant="contained"
+                      startIcon={<ImageIcon />}
+                      onClick={() => handleDownloadPNG(ev)}
+                      disabled={loading[ev.id]?.PNG || loading[ev.id]?.PDF}
                       sx={{
-                        mb: 1,
-                        textAlign: elemento.type === 'header' ? 'center' : 'left'
+                        bgcolor: "#f5f5dc",
+                        color: "#4e342e",
+                        "&:hover": { bgcolor: "#e6d5b8" },
                       }}
                     >
-                      {elemento.type === 'image' && elemento.content && (
-                        <Box sx={{ textAlign: 'center', mt: 1 }}>
-                          <img
-                            src={`data:image/jpeg;base64,${elemento.content}`}
-                            alt="Elemento visual"
-                            style={{
-                              maxWidth: '100%',
-                              maxHeight: '100px',
-                              objectFit: 'contain',
-                              borderRadius: '8px'
-                            }}
-                          />
-                        </Box>
-                      )}
-                    </Box>
-                  ))}
-                </Box>
-                
-                {/* Botón de Vista Previa en la parte inferior */}
-                <Box sx={{ mt: 'auto', pt: 2 }}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    color="primary"
-                    startIcon={<PreviewIcon />}
-                    onClick={() => handleOpenPreview(evento)}
-                    sx={{
-                      py: 1,
-                      borderRadius: 2,
-                      fontWeight: 'bold',
-                      textTransform: 'none',
-                      letterSpacing: 0.5,
-                      boxShadow: theme.shadows[2],
-                      '&:hover': {
-                        boxShadow: theme.shadows[4],
-                        backgroundColor: theme.palette.primary.dark
-                      }
-                    }}
-                  >
-                    Ver Vista Previa
-                  </Button>
-                </Box>
-              </Paper>
-            </Grid>
-          ))}
+                      {loading[ev.id]?.PNG ? "Generando PNG..." : "Descargar PNG"}
+                    </Button>
+
+                    <Button
+                      variant="contained"
+                      startIcon={<PictureAsPdfIcon />}
+                      onClick={() => handleDownloadPDF(ev)}
+                      disabled={loading[ev.id]?.PDF || loading[ev.id]?.PNG}
+                      sx={{
+                        bgcolor: "#f5f5dc",
+                        color: "#4e342e",
+                        "&:hover": { bgcolor: "#e6d5b8" },
+                      }}
+                    >
+                      {loading[ev.id]?.PDF ? "Generando PDF..." : "Descargar PDF"}
+                    </Button>
+                  </Box>
+                </Paper>
+              </Grid>
+            );
+          })}
         </Grid>
       )}
-
-      {/* Modal de Vista Previa */}
-      <EventPreview />
     </Box>
   );
 };

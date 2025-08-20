@@ -16,9 +16,16 @@ const TemplateDialog = ({
 }) => {
 
   const handleFormSubmit = async (data) => {
-    // Ya no usamos toast aquí, solo delegamos al padre
     await onSubmit(data);
     onClose();
+  };
+
+  const buttonStyle = {
+    backgroundColor: '#f5f5dc', // beige
+    color: '#5a4633',            // texto marrón/beige oscuro
+    '&:hover': {
+      backgroundColor: '#e6e0c8'
+    }
   };
 
   return (
@@ -80,8 +87,8 @@ const TemplateDialog = ({
 
       {tab === 0 && (
         <DialogActions>
-          <Button onClick={onClose}>Cerrar</Button>
-          <Button onClick={() => onTabChange(1)} variant="contained">Nueva Plantilla</Button>
+          <Button onClick={onClose} sx={buttonStyle}>Cerrar</Button>
+          <Button onClick={() => onTabChange(1)} variant="contained" sx={buttonStyle}>Nueva Plantilla</Button>
         </DialogActions>
       )}
     </Dialog>

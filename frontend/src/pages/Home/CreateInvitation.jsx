@@ -73,8 +73,6 @@ const CreateInvitation = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    // Normalizar tipo de evento para que coincida con los choices del modelo
     if (name === 'tipo') {
       const normalized = value.replace(/-/g, '_'); 
       setFormData(prev => ({ ...prev, [name]: normalized }));
@@ -143,7 +141,6 @@ const CreateInvitation = () => {
       return;
     }
 
-    // Normalizar fecha: agregar segundos si no existen
     let fecha = formData.fecha_evento;
     if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(fecha)) {
       fecha += ':00';
@@ -179,7 +176,7 @@ const CreateInvitation = () => {
   if (!currentUser) {
     return (
       <Container maxWidth="md" sx={{ py: 4, textAlign: 'center' }}>
-        <Typography variant="h6">Debes iniciar sesión para crear eventos</Typography>
+        <Typography variant="h6" sx={{ color: '#a1887f' }}>Debes iniciar sesión para crear eventos</Typography>
       </Container>
     );
   }
@@ -188,10 +185,10 @@ const CreateInvitation = () => {
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <Box sx={{ mb: 4, textAlign: 'center' }}>
-          <Typography variant="h3" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+          <Typography variant="h3" gutterBottom sx={{ color: '#ba8a7aff', fontWeight: 'bold' }}>
             Crear Nueva Invitación
           </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
+          <Typography variant="subtitle1" sx={{ color: '#897067ff' }}>
             Crea tu evento paso a paso con nuestras plantillas personalizables
           </Typography>
         </Box>
@@ -206,6 +203,7 @@ const CreateInvitation = () => {
             loadingPlantillas={loadingPlantillas}
             onTemplateChange={handleTemplateChange}
             onOpenDialog={openTemplateDialog}
+            sxButton={{ bgcolor: '#f5f5dc', color: '#4e342e' }}
           />
 
           <TemplatePreviewSection selectedTemplate={selectedTemplate} />
@@ -215,6 +213,7 @@ const CreateInvitation = () => {
               formData={formData} 
               handleChange={handleChange} 
               eventTypes={eventTypes} 
+              sxInput={{ bgcolor: '#f5f5dc', color: '#4e342e' }}
             />
           )}
 
@@ -224,6 +223,7 @@ const CreateInvitation = () => {
               submitting={submitting}
               loadingPlantillas={loadingPlantillas}
               formData={formData}
+              sxButton={{ bgcolor: '#f5f5dc', color: '#4e342e' }}
             />
           )}
         </Box>

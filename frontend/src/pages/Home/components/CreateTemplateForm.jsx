@@ -18,6 +18,13 @@ const CreateTemplateForm = ({ onSubmit, onCancel, initialData }) => {
   });
   const [loading, setLoading] = useState(false);
 
+  // Estilo beige consistente
+  const beigeButtonStyle = {
+    backgroundColor: '#f5f5dc', // beige
+    color: '#5a4633',            // texto marrón/beige oscuro
+    '&:hover': { backgroundColor: '#e6e0c8' }
+  };
+
   // Actualiza editorConfig si cambia initialData (editar plantilla)
   useEffect(() => {
     if (initialData?.config_diseno) {
@@ -31,24 +38,14 @@ const CreateTemplateForm = ({ onSubmit, onCancel, initialData }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!nombre.trim()) {
-      // toast eliminado
-      return;
-    }
+    if (!nombre.trim()) return;
 
     setLoading(true);
     try {
-      const templateData = {
-        nombre,
-        config_diseno: editorConfig
-      };
-
+      const templateData = { nombre, config_diseno: editorConfig };
       await onSubmit(templateData);
-      // toast eliminado
-
     } catch (error) {
       console.error('Error saving template:', error);
-      // toast eliminado
     } finally {
       setLoading(false);
     }
@@ -81,10 +78,20 @@ const CreateTemplateForm = ({ onSubmit, onCancel, initialData }) => {
         />
 
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-          <Button type="button" variant="outlined" color="secondary" onClick={onCancel}>
+          <Button
+            type="button"
+            variant="outlined"
+            sx={beigeButtonStyle}
+            onClick={onCancel}
+          >
             Cancelar
           </Button>
-          <Button type="submit" variant="contained" disabled={loading}>
+          <Button
+            type="submit"
+            variant="contained"
+            sx={beigeButtonStyle}
+            disabled={loading}
+          >
             {loading ? <CircularProgress size={24} /> : 'Guardar Plantilla'}
           </Button>
         </Box>
